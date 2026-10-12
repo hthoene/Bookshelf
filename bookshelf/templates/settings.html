@@ -4,9 +4,16 @@
 
 {% macro copy_field(id, value) -%}
 <div class="copy-field">
-  <input class="input mono" id="{{ id }}" value="{{ value }}" readonly>
-  <button type="button" class="btn" data-copy="{{ value }}">{{ icon('copy', 16) }}<span>Copy</span></button>
+  <code class="copy-value" id="{{ id }}">{{ value }}</code>
+  <button type="button" class="btn btn-copy" data-copy="{{ value }}" aria-label="Copy address">{{ icon('copy', 16) }}<span>Copy</span></button>
 </div>
+{%- endmacro %}
+
+{% macro howto(title="Set up in KOReader") -%}
+<details class="howto">
+  <summary>{{ title }}</summary>
+  {{ caller() }}
+</details>
 {%- endmacro %}
 
 {% block content %}
@@ -20,28 +27,32 @@
     <h2>{{ icon('sync', 18) }} KOReader progress sync</h2>
     <p class="card-sub">Keep your reading position in sync across all your KOReader devices.</p>
     <div class="field">
-      <label for="sync-url">Server address</label>
+      <span class="field-label">Server address</span>
       {{ copy_field('sync-url', server_url) }}
     </div>
+    {% call howto() %}
     <ol class="steps">
       <li>In KOReader, open a book and go to <strong>Tools → Progress sync → Custom sync server</strong>.</li>
       <li>Enter the server address above.</li>
       <li>Choose <strong>Login</strong> and use your Bookshelf username and password.</li>
       <li>Optionally enable automatic sync. The default document matching (“Binary”) works best.</li>
     </ol>
+    {% endcall %}
   </section>
 
   <section class="card">
     <h2>{{ icon('catalog', 18) }} OPDS catalog</h2>
     <p class="card-sub">Browse and download your library directly on your e-reader.</p>
     <div class="field">
-      <label for="opds-url">Catalog address</label>
+      <span class="field-label">Catalog address</span>
       {{ copy_field('opds-url', opds_url) }}
     </div>
+    {% call howto() %}
     <ol class="steps">
       <li>In KOReader’s file browser, open <strong>Search → OPDS catalog</strong> and tap <strong>+</strong>.</li>
       <li>Enter the catalog address with your Bookshelf username and password.</li>
     </ol>
+    {% endcall %}
   </section>
 
   <section class="card" id="sync-books">
@@ -49,30 +60,34 @@
     <p class="card-sub">KOReader can download books automatically into a folder on your e-reader. Choose what it should keep in sync: your whole library, or only a selection.</p>
     {% for id, label, url in sync_feeds %}
     <div class="field">
-      <label for="{{ id }}">{{ label }}{% if id == 'sync-marked' %} <span class="muted">· {{ device_count }} marked, use “Send to e-reader” on a book{% if device_count %} · <a class="link" href="/?device=true">show</a>{% endif %}</span>{% endif %}</label>
+      <span class="field-label">{{ label }}{% if id == 'sync-marked' %} <span class="muted">· {{ device_count }} marked, use “Send to e-reader” on a book{% if device_count %} · <a class="link" href="/?device=true">show</a>{% endif %}</span>{% endif %}</span>
       {{ copy_field(id, url) }}
     </div>
     {% endfor %}
+    {% call howto() %}
     <ol class="steps">
       <li>In KOReader’s file browser, open <strong>Search → OPDS catalog</strong>, tap <strong>+</strong> and add a catalog with one of the addresses above and your Bookshelf username and password. Enable <strong>Sync catalog</strong>.</li>
       <li>In the OPDS catalog menu, choose the folder for synced books.</li>
       <li>Run <strong>Sync</strong> (for example by long-pressing the catalog). KOReader downloads the books added since the last sync, newest first.</li>
     </ol>
     <p class="small muted sync-note">KOReader downloads at most 50 books per sync by default. Raise that limit for the first sync of a large library, or use <strong>Force sync</strong>. Books removed in Bookshelf stay on the e-reader.</p>
+    {% endcall %}
   </section>
 
   <section class="card" id="statistics">
     <h2>{{ icon('chart', 18) }} Reading statistics</h2>
     <p class="card-sub">Sync KOReader’s reading statistics to see your reading time, streaks and activity.</p>
     <div class="field">
-      <label for="webdav-url">WebDAV address</label>
+      <span class="field-label">WebDAV address</span>
       {{ copy_field('webdav-url', webdav_url) }}
     </div>
+    {% call howto() %}
     <ol class="steps">
       <li>In KOReader’s file browser, open <strong>Cloud storage</strong>, tap <strong>+</strong> and add a <strong>WebDAV</strong> server with the address above and your Bookshelf username and password. Leave the folder empty.</li>
       <li>Open a book, then <strong>Tools → Reading statistics → Settings → Cloud sync</strong>, pick that server and choose its main folder.</li>
       <li>Run <strong>Synchronize now</strong> (or let KOReader sync automatically). Repeat steps 1–2 on each device; KOReader merges their statistics.</li>
     </ol>
+    {% endcall %}
   </section>
 
   <section class="card">
