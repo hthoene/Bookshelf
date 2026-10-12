@@ -17,6 +17,8 @@ from ._files import book_file_response, cover_response
 
 router = APIRouter()
 
+PAGE_SIZE = 60  # books per page; more are loaded while scrolling
+
 
 def _entry_or_404(db: DB, user: User, book_id: int) -> BookEntry:
     entry = library.get_entry(db, user, book_id)
@@ -33,28 +35,50 @@ def library_page(
     q: str = "",
     status: str = "all",
     sort: str = "recent",
+    page: int = 1,
 ) -> Response:
     status = status if status in library.STATUSES else "all"
     sort = sort if sort in library.SORTS else "recent"
-    matching = library.list_books(db, user, query=q, sort=sort)
+    page = max(page, 1)
+    result = library.find_books(
+        db, user, text=q, status=status, sort=sort, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
+    )
+    next_url = None
+    if result.has_more:
+        url = request.url.include_query_params(page=page + 1)
+        next_url = f"{url.path}?{url.query}"
+
+    is_htmx = (
+        request.headers.get("HX-Request") == "true"
+        and request.headers.get("HX-History-Restore-Request") != "true"
+    )
+    headers = {"Vary": "HX-Request"}
+    if is_htmx and page > 1:  # infinite scroll: just the next batch of cards
+        return render(
+            request,
+            "partials/book_page.html",
+            headers=headers,
+            entries=result.entries,
+            next_url=next_url,
+        )
+
+    counts = library.count_by_status(db, user, q)
+    show_shelf = not q and status == "all" and page == 1
     context = {
         "user": user,
         "nav": "library",
         "q": q,
         "status": status,
         "sort": sort,
-        "entries": library.filter_by_status(matching, status),
-        "counts": library.count_by_status(matching),
-        "continue_reading": library.continue_reading(matching) if not q and status == "all" else [],
-        "has_books": bool(matching) or bool(q),
+        "entries": result.entries,
+        "next_url": next_url,
+        "counts": counts,
+        "continue_reading": library.continue_reading(db, user) if show_shelf else [],
+        "has_books": counts["all"] > 0 or bool(q),
     }
     # htmx requests (search, filters, refresh after upload) only need the library fragment.
-    is_fragment = (
-        request.headers.get("HX-Request") == "true"
-        and request.headers.get("HX-History-Restore-Request") != "true"
-    )
-    template = "partials/library.html" if is_fragment else "library.html"
-    return render(request, template, headers={"Vary": "HX-Request"}, **context)
+    template = "partials/library.html" if is_htmx else "library.html"
+    return render(request, template, headers=headers, **context)
 
 
 @router.post("/api/books")

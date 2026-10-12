@@ -4,10 +4,24 @@ from __future__ import annotations
 
 from datetime import datetime
 
-from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
-from sqlalchemy.orm import Mapped, mapped_column, relationship
+from sqlalchemy import ForeignKey, Index, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship, validates
 
 from .db import Base, utcnow
+
+
+def author_sort_key(author: str | None) -> str | None:
+    """Sort key for the first author: "Jane Austen" -> "austen, jane".
+
+    Names already written as "Last, First" are kept. Multiple authors are joined with " & ".
+    """
+    first = (author or "").split(" & ")[0].strip()
+    if not first:
+        return None
+    if "," not in first and " " in first:
+        given, surname = first.rsplit(" ", 1)
+        first = f"{surname}, {given}"
+    return first.casefold()
 
 
 class User(Base):
@@ -40,13 +54,18 @@ class AuthSession(Base):
 
 class Book(Base):
     __tablename__ = "books"
-    __table_args__ = (UniqueConstraint("user_id", "partial_md5"),)
+    __table_args__ = (
+        UniqueConstraint("user_id", "partial_md5"),
+        Index("ix_books_user_recent", "user_id", "created_at", "id"),  # default library order
+    )
 
     id: Mapped[int] = mapped_column(primary_key=True)
     user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
 
     title: Mapped[str] = mapped_column(String(500))
     author: Mapped[str | None] = mapped_column(String(500))
+    # Derived from ``author`` (see ``author_sort_key``), kept in sync automatically.
+    author_sort: Mapped[str | None] = mapped_column(String(500))
     series: Mapped[str | None] = mapped_column(String(500))
     series_index: Mapped[float | None]
     description: Mapped[str | None] = mapped_column(Text)
@@ -66,6 +85,11 @@ class Book(Base):
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
 
     owner: Mapped[User] = relationship(back_populates="books")
+
+    @validates("author")
+    def _sync_author_sort(self, _key: str, author: str | None) -> str | None:
+        self.author_sort = author_sort_key(author)
+        return author
 
 
 class ReadingProgress(Base):

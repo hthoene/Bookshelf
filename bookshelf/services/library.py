@@ -7,14 +7,14 @@ from datetime import UTC, datetime
 from pathlib import Path, PurePath
 from typing import BinaryIO
 
-from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy import Select, and_, case, func, select
+from sqlalchemy.orm import Session, aliased
 
 from ..db import utcnow
 from ..formats import detect_format
 from ..models import Book, ReadingProgress, User
 from ..storage import Storage
-from . import covers, progress
+from . import covers
 from .hashing import filename_md5, partial_md5
 from .metadata import extract_metadata
 
@@ -135,93 +135,109 @@ def _copy_limited(source: BinaryIO, target: Path, max_bytes: int) -> int:
 
 
 # --- Queries ----------------------------------------------------------------------------------
+#
+# All filtering, sorting and paging happens in SQL, so the cost of a page stays constant no
+# matter how large the library is. KOReader may report progress under the content hash or the
+# file name hash of a book, so both are joined and the most recent record wins.
+
+_by_hash = aliased(ReadingProgress, name="progress_by_hash")
+_by_name = aliased(ReadingProgress, name="progress_by_name")
+_name_is_newer = _by_name.timestamp > func.coalesce(_by_hash.timestamp, -1)
+_percentage = case((_name_is_newer, _by_name.percentage), else_=_by_hash.percentage)
+_last_read = case((_name_is_newer, _by_name.timestamp), else_=_by_hash.timestamp)
+_status = case(
+    (func.coalesce(_percentage, 0) <= 0, "unread"),
+    (_percentage >= FINISHED_THRESHOLD, "finished"),
+    else_="reading",
+)
+_search_text = func.casefold(
+    Book.title + " " + func.coalesce(Book.author, "") + " " + func.coalesce(Book.series, "")
+)
+_ORDER_BY = {
+    "recent": (Book.created_at.desc(), Book.id.desc()),
+    "title": (func.casefold(Book.title), Book.id),
+    "author": (
+        Book.author_sort.is_(None),
+        Book.author_sort,
+        func.casefold(func.coalesce(Book.series, "")),
+        func.coalesce(Book.series_index, 0),
+        func.casefold(Book.title),
+        Book.id,
+    ),
+    "last_read": (_last_read.desc().nulls_last(), Book.created_at.desc(), Book.id.desc()),
+}
 
 
-def list_books(
-    db: Session, user: User, *, query: str = "", sort: str = "recent"
-) -> list[BookEntry]:
-    """All books of ``user`` matching ``query``, with progress attached, sorted by ``sort``."""
-    books = db.scalars(select(Book).where(Book.user_id == user.id)).all()
-    progress_map = progress.progress_by_document(db, user.id)
-    entries = [BookEntry(book, _progress_for(book, progress_map)) for book in books]
-    if query.strip():
-        terms = query.casefold().split()
-        entries = [entry for entry in entries if _matches(entry.book, terms)]
-    return sort_entries(entries, sort)
+@dataclass(frozen=True)
+class BookPage:
+    entries: list[BookEntry]
+    has_more: bool
 
 
-def get_entry(db: Session, user: User, book_id: int) -> BookEntry | None:
-    book = db.get(Book, book_id)
-    if book is None or book.user_id != user.id:
-        return None
-    records = db.scalars(
-        select(ReadingProgress).where(
-            ReadingProgress.user_id == user.id,
-            ReadingProgress.document.in_([book.partial_md5, book.filename_md5]),
+def _scoped(statement: Select, user: User, text: str = "") -> Select:
+    """Join reading progress, restrict to ``user``'s books and apply the search ``text``."""
+    statement = (
+        statement.outerjoin(
+            _by_hash, and_(_by_hash.user_id == Book.user_id, _by_hash.document == Book.partial_md5)
         )
+        .outerjoin(
+            _by_name, and_(_by_name.user_id == Book.user_id, _by_name.document == Book.filename_md5)
+        )
+        .where(Book.user_id == user.id)
     )
-    return BookEntry(book, _progress_for(book, {r.document: r for r in records}))
+    for term in text.casefold().split():
+        statement = statement.where(_search_text.contains(term, autoescape=True))
+    return statement
 
 
-def filter_by_status(entries: list[BookEntry], status: str) -> list[BookEntry]:
-    if status not in STATUSES or status == "all":
-        return entries
-    return [entry for entry in entries if entry.status == status]
+def _entries(db: Session, statement: Select) -> list[BookEntry]:
+    entries = []
+    for book, by_hash, by_name in db.execute(statement):
+        records = [record for record in (by_hash, by_name) if record is not None]
+        latest = max(records, key=lambda record: record.timestamp) if records else None
+        entries.append(BookEntry(book, latest))
+    return entries
 
 
-def count_by_status(entries: list[BookEntry]) -> dict[str, int]:
+def find_books(
+    db: Session,
+    user: User,
+    *,
+    text: str = "",
+    status: str = "all",
+    sort: str = "recent",
+    limit: int = 60,
+    offset: int = 0,
+) -> BookPage:
+    """One page of ``user``'s books matching the search ``text`` and reading ``status``."""
+    statement = _scoped(select(Book, _by_hash, _by_name), user, text)
+    if status in STATUSES and status != "all":
+        statement = statement.where(_status == status)
+    statement = statement.order_by(*_ORDER_BY.get(sort, _ORDER_BY["recent"]))
+    # Fetch one extra row to know whether another page exists without a COUNT query.
+    entries = _entries(db, statement.limit(limit + 1).offset(offset))
+    return BookPage(entries[:limit], has_more=len(entries) > limit)
+
+
+def count_by_status(db: Session, user: User, text: str = "") -> dict[str, int]:
+    statement = _scoped(select(_status, func.count(Book.id)).select_from(Book), user, text)
     counts = dict.fromkeys(STATUSES, 0)
-    counts["all"] = len(entries)
-    for entry in entries:
-        counts[entry.status] += 1
+    for status, count in db.execute(statement.group_by(_status)):
+        counts[status] = count
+        counts["all"] += count
     return counts
 
 
-def continue_reading(entries: list[BookEntry]) -> list[BookEntry]:
-    reading = [entry for entry in entries if entry.status == "reading"]
-    reading.sort(key=lambda entry: entry.progress.timestamp, reverse=True)
-    return reading[:CONTINUE_READING_LIMIT]
+def continue_reading(db: Session, user: User) -> list[BookEntry]:
+    return find_books(
+        db, user, status="reading", sort="last_read", limit=CONTINUE_READING_LIMIT
+    ).entries
 
 
-def sort_entries(entries: list[BookEntry], sort: str) -> list[BookEntry]:
-    if sort == "title":
-        return sorted(entries, key=lambda e: e.book.title.casefold())
-    if sort == "author":
-        return sorted(entries, key=_author_sort_key)
-    if sort == "last_read":
-        return sorted(
-            entries, key=lambda e: e.progress.timestamp if e.progress else -1, reverse=True
-        )
-    return sorted(entries, key=lambda e: (e.book.created_at, e.book.id), reverse=True)
-
-
-def _progress_for(book: Book, progress_map: dict[str, ReadingProgress]) -> ReadingProgress | None:
-    """KOReader may identify a book by content or by file name; use the most recent match."""
-    candidates = [progress_map.get(book.partial_md5), progress_map.get(book.filename_md5)]
-    found = [record for record in candidates if record is not None]
-    return max(found, key=lambda record: record.timestamp) if found else None
-
-
-def _matches(book: Book, terms: list[str]) -> bool:
-    haystack = " ".join(filter(None, (book.title, book.author, book.series))).casefold()
-    return all(term in haystack for term in terms)
-
-
-def _author_sort_key(entry: BookEntry) -> tuple:
-    book = entry.book
-    first_author = (book.author or "").split(" & ")[0].strip()
-    # "Last, First" is already in sort order; "First Last" sorts by the last word.
-    if "," in first_author:
-        surname = first_author.split(",")[0]
-    else:
-        surname = first_author.split()[-1] if first_author else ""
-    return (
-        not book.author,
-        surname.casefold(),
-        (book.series or "").casefold(),
-        book.series_index or 0,
-        book.title.casefold(),
-    )
+def get_entry(db: Session, user: User, book_id: int) -> BookEntry | None:
+    statement = _scoped(select(Book, _by_hash, _by_name), user).where(Book.id == book_id)
+    entries = _entries(db, statement)
+    return entries[0] if entries else None
 
 
 # --- Mutations --------------------------------------------------------------------------------

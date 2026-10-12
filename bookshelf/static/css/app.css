@@ -337,6 +337,7 @@ textarea.input { height: auto; min-height: 120px; padding: 10px 12px; line-heigh
 /* ---------- Grid ---------- */
 
 .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 32px 22px; }
+.load-more { grid-column: 1 / -1; padding: 24px 0; color: var(--muted); font-size: 14px; text-align: center; }
 .book-card { display: flex; flex-direction: column; gap: 11px; min-width: 0; }
 .book-card .cover-frame { transition: transform 0.2s ease; }
 .book-card:hover .cover-frame { transform: translateY(-4px); }

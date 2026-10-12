@@ -22,6 +22,10 @@ def utcnow() -> datetime:
     return datetime.now(UTC).replace(tzinfo=None)
 
 
+def _casefold(value: str | None) -> str | None:
+    return value.casefold() if value is not None else None
+
+
 def make_engine(url: str) -> Engine:
     engine = create_engine(url, connect_args={"check_same_thread": False})
 
@@ -32,6 +36,8 @@ def make_engine(url: str) -> Engine:
         cursor.execute("PRAGMA journal_mode=WAL")
         cursor.execute("PRAGMA busy_timeout=5000")
         cursor.close()
+        # Unicode-aware case folding for search and sorting (SQLite's LOWER() is ASCII-only).
+        dbapi_connection.create_function("casefold", 1, _casefold, deterministic=True)
 
     return engine
 

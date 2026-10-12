@@ -48,6 +48,10 @@ scripts/dev_seed.py  demo data for local development
   (`db: DB, user: CurrentUser`). Pages that need a login raise `LoginRequired`, which redirects.
 - **Users and privacy.** Every query for books must be scoped to the current user. Always look up
   books via `library.get_entry(db, user, id)` or filter on `Book.user_id`.
+- **Scalability.** Libraries can hold tens of thousands of books. Never load all books into
+  Python: search, filter, sort and paginate in SQL (see `library.find_books`, which pages with
+  `LIMIT`/`OFFSET` and feeds infinite scrolling in `partials/book_page.html`). Use the SQLite
+  function `casefold()` (registered in `db.py`) for Unicode-aware search and sorting.
 - **Datetimes.** Stored as naive UTC (`db.utcnow()`). KOReader timestamps are unix seconds (int).
 - **Schema changes.** Edit `models.py`, then run `alembic revision --autogenerate`, review the
   generated file in `migrations/versions/`, and commit it. Never edit an existing migration.

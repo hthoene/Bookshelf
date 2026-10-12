@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import time
 
-from sqlalchemy import select
 from sqlalchemy.orm import Session
 
 from ..models import ReadingProgress
@@ -12,11 +11,6 @@ from ..models import ReadingProgress
 
 def get_progress(db: Session, user_id: int, document: str) -> ReadingProgress | None:
     return db.get(ReadingProgress, (user_id, document))
-
-
-def progress_by_document(db: Session, user_id: int) -> dict[str, ReadingProgress]:
-    records = db.scalars(select(ReadingProgress).where(ReadingProgress.user_id == user_id))
-    return {record.document: record for record in records}
 
 
 def save_progress(

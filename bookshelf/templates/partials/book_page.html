@@ -1,0 +1,8 @@
+{# One page of book cards. The trailing sentinel loads the next page when it scrolls into view.
+   It sits inside the library form, so it overrides the form's inherited hx-* attributes. #}
+{% for entry in entries %}{% include "partials/book_card.html" %}{% endfor %}
+{% if next_url %}
+<a class="load-more" href="{{ next_url }}"
+   hx-get="{{ next_url }}" hx-trigger="intersect once" hx-target="this" hx-swap="outerHTML"
+   hx-push-url="false" hx-sync="this:drop">Loading more books…</a>
+{% endif %}

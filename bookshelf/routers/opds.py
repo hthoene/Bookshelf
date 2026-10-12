@@ -86,10 +86,11 @@ def catalog_books(
     page: int = 1,
 ) -> Response:
     page = max(page, 1)
-    entries = library.filter_by_status(library.list_books(db, user, query=q, sort=sort), status)
-    start = (page - 1) * PAGE_SIZE
+    result = library.find_books(
+        db, user, text=q, status=status, sort=sort, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
+    )
     next_url = None
-    if start + PAGE_SIZE < len(entries):
+    if result.has_more:
         url = request.url.include_query_params(page=page + 1)
         next_url = f"{url.path}?{url.query}"
     titles = {key: section_title for key, section_title, *_ in _SECTIONS}
@@ -102,7 +103,7 @@ def catalog_books(
         feed_id=f"books:{request.url.query or 'all'}",
         self_url=f"{request.url.path}?{request.url.query}",
         next_url=next_url,
-        entries=entries[start : start + PAGE_SIZE],
+        entries=result.entries,
         mime_type=mime_type,
         now=_now(),
         navigation_type=NAVIGATION,

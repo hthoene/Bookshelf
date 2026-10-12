@@ -33,7 +33,7 @@
   {% if entries %}
     {% if continue_reading %}<h2 class="section-title">All books</h2>{% endif %}
     <div class="grid">
-      {% for entry in entries %}{% include "partials/book_card.html" %}{% endfor %}
+      {% include "partials/book_page.html" %}
     </div>
   {% elif not has_books %}
     <div class="empty">
