@@ -1,0 +1,96 @@
+{% extends "base.html" %}
+{% from "_macros.html" import cover %}
+{% block title %}Statistics · Bookshelf{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Reading statistics</h1>
+  <p class="muted">
+    {% if synced_at %}{{ icon('sync', 14) }} Synced from KOReader {{ synced_at|timeago }}
+    {% else %}Synced from KOReader’s reading statistics{% endif %}
+  </p>
+</div>
+
+{% if stats %}
+<div class="stat-tiles">
+  <div class="stat-tile">
+    <span class="stat-label">Total reading time</span>
+    <strong class="stat-value">{{ stats.total_seconds|duration }}</strong>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">This week</span>
+    <strong class="stat-value">{{ stats.week_seconds|duration }}</strong>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">Current streak</span>
+    <strong class="stat-value">{{ stats.streak_days }} day{{ '' if stats.streak_days == 1 else 's' }}</strong>
+  </div>
+  <div class="stat-tile">
+    <span class="stat-label">Pages read</span>
+    <strong class="stat-value">{{ stats.pages_read|thousands }}</strong>
+  </div>
+</div>
+
+<section class="card">
+  <h2>{{ icon('calendar', 18) }} Reading activity</h2>
+  <p class="card-sub">{{ stats.year_seconds|duration }} this year · {{ stats.days_read|thousands }} reading day{{ '' if stats.days_read == 1 else 's' }} in total</p>
+  <div class="heatmap" data-scroll-end>
+    <div class="heatmap-weeks" style="--weeks: {{ stats.calendar|length }}">
+      {% for week in stats.calendar %}
+      <div class="heat-week">
+        <span class="heat-month">{{ week.label }}</span>
+        {% for day in week.days %}
+          {% if day %}
+          <span class="heat l{{ day.level }}" title="{{ day.day|date }}: {{ day.seconds|duration if day.seconds else 'no reading' }}"></span>
+          {% else %}
+          <span class="heat future"></span>
+          {% endif %}
+        {% endfor %}
+      </div>
+      {% endfor %}
+    </div>
+  </div>
+  <div class="heat-legend" aria-hidden="true">
+    Less <span class="heat l0"></span><span class="heat l1"></span><span class="heat l2"></span><span class="heat l3"></span><span class="heat l4"></span> More
+  </div>
+</section>
+
+{% if stats.books %}
+<section class="card">
+  <h2>{{ icon('book', 18) }} Recently read</h2>
+  <p class="card-sub">Time spent per book, most recent first.</p>
+  <ul class="stat-books">
+    {% for item in stats.books %}
+    {% set book = library_books.get(item.md5) %}
+    <li>
+      {% if book %}<a class="stat-book" href="/books/{{ book.id }}">{% else %}<div class="stat-book">{% endif %}
+        <div class="stat-book-cover cover-frame">
+          {% if book %}{{ cover(book) }}{% else %}<div class="cover cover-placeholder" style="--hue: {{ item.title|hue }}"></div>{% endif %}
+        </div>
+        <div class="stat-book-info">
+          <div class="book-title">{{ item.title }}</div>
+          {% if item.authors %}<div class="book-author">{{ item.authors }}</div>{% endif %}
+        </div>
+        <div class="stat-book-numbers">
+          <strong>{{ item.seconds|duration }}</strong>
+          <span>{{ item.pages_read|thousands }} page{{ '' if item.pages_read == 1 else 's' }} · {{ item.last_read|timeago }}</span>
+        </div>
+      {% if book %}</a>{% else %}</div>{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+{% else %}
+<section class="card stats-empty">
+  <h2>{{ icon('chart', 18) }} No statistics yet</h2>
+  <p class="card-sub">KOReader records how long you read each book. Sync its statistics to Bookshelf to see them here and on every book page.</p>
+  <ol class="steps">
+    <li>In KOReader, open <strong>Cloud storage</strong> and add a <strong>WebDAV</strong> server with the address <code class="mono">{{ webdav_url }}</code> and your Bookshelf username and password.</li>
+    <li>Open <strong>Reading statistics → Settings → Cloud sync</strong> and choose that server’s main folder.</li>
+    <li>Run <strong>Synchronize now</strong>. Your statistics appear here after the first sync.</li>
+  </ol>
+  <p class="small muted">Full instructions are on the <a class="link" href="/settings#statistics">Settings</a> page.</p>
+</section>
+{% endif %}
+{% endblock %}

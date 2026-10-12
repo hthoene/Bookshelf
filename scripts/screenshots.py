@@ -57,10 +57,10 @@ def main() -> None:
             if scheme == "light":
                 page.click("a.book-card:has-text('Moby-Dick')")
                 shoot(page, "book")
+                page.goto(f"{base}/stats")
+                shoot(page, "stats")
                 page.goto(f"{base}/settings")
                 shoot(page, "settings")
-                page.goto(f"{base}/?q=doyle")
-                shoot(page, "search")
             page.context.close()
 
         page = browser.new_context(color_scheme="dark", **mobile).new_page()
@@ -68,6 +68,8 @@ def main() -> None:
         shoot(page, "mobile-library")
         page.click("a.book-card:has-text('Dracula')")
         shoot(page, "mobile-book")
+        page.goto(f"{base}/stats")
+        shoot(page, "mobile-stats")
         page.context.close()
 
         page = browser.new_context(color_scheme="light", **desktop).new_page()

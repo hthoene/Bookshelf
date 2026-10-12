@@ -25,6 +25,7 @@ def _render_settings(request: Request, user: User, status_code: int = 200, **ext
         nav="settings",
         server_url=server_url,
         opds_url=f"{server_url}/opds",
+        webdav_url=f"{server_url}/webdav",
         **extra,
     )
 

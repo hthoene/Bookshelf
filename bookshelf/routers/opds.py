@@ -6,16 +6,13 @@ Authentication is HTTP Basic with the regular Bookshelf username and password.
 from __future__ import annotations
 
 from datetime import UTC, datetime
-from typing import Annotated
 
-from fastapi import APIRouter, Depends, HTTPException, Request
+from fastapi import APIRouter, HTTPException, Request
 from fastapi.responses import Response
-from fastapi.security import HTTPBasic, HTTPBasicCredentials
 
-from ..deps import DB, AppStorage
+from ..deps import DB, AppStorage, BasicAuthUser
 from ..formats import mime_type
-from ..models import User
-from ..services import library, users
+from ..services import library
 from ..templating import render
 from ._files import book_file_response, cover_response
 
@@ -25,23 +22,6 @@ NAVIGATION = "application/atom+xml;profile=opds-catalog;kind=navigation"
 ACQUISITION = "application/atom+xml;profile=opds-catalog;kind=acquisition"
 PAGE_SIZE = 50
 
-_basic = HTTPBasic(realm="Bookshelf", auto_error=False)
-
-
-def opds_user(db: DB, credentials: Annotated[HTTPBasicCredentials | None, Depends(_basic)]) -> User:
-    user = (
-        users.authenticate(db, credentials.username, credentials.password) if credentials else None
-    )
-    if user is None:
-        raise HTTPException(
-            status_code=401,
-            detail="Authentication required.",
-            headers={"WWW-Authenticate": 'Basic realm="Bookshelf"'},
-        )
-    return user
-
-
-OpdsUser = Annotated[User, Depends(opds_user)]
 
 # (id, title, description, query string) of the sections on the catalog start page.
 _SECTIONS = [
@@ -63,7 +43,7 @@ def _now() -> str:
 
 
 @router.get("")
-def catalog_root(request: Request, user: OpdsUser) -> Response:
+def catalog_root(request: Request, user: BasicAuthUser) -> Response:
     return render(
         request,
         "opds/navigation.xml",
@@ -79,7 +59,7 @@ def catalog_root(request: Request, user: OpdsUser) -> Response:
 def catalog_books(
     request: Request,
     db: DB,
-    user: OpdsUser,
+    user: BasicAuthUser,
     q: str = "",
     status: str = "all",
     sort: str = "recent",
@@ -112,7 +92,7 @@ def catalog_books(
 
 
 @router.get("/search.xml")
-def opensearch(request: Request, user: OpdsUser) -> Response:
+def opensearch(request: Request, user: BasicAuthUser) -> Response:
     return render(
         request,
         "opds/opensearch.xml",
@@ -123,7 +103,7 @@ def opensearch(request: Request, user: OpdsUser) -> Response:
 
 
 @router.get("/books/{book_id}/file")
-def download(db: DB, user: OpdsUser, storage: AppStorage, book_id: int) -> Response:
+def download(db: DB, user: BasicAuthUser, storage: AppStorage, book_id: int) -> Response:
     entry = library.get_entry(db, user, book_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Book not found.")
@@ -131,7 +111,7 @@ def download(db: DB, user: OpdsUser, storage: AppStorage, book_id: int) -> Respo
 
 
 @router.get("/books/{book_id}/cover")
-def cover(db: DB, user: OpdsUser, storage: AppStorage, book_id: int) -> Response:
+def cover(db: DB, user: BasicAuthUser, storage: AppStorage, book_id: int) -> Response:
     entry = library.get_entry(db, user, book_id)
     if entry is None:
         raise HTTPException(status_code=404, detail="Book not found.")

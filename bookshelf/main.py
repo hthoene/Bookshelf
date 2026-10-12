@@ -15,7 +15,7 @@ from . import __version__
 from .config import Settings
 from .db import init_database
 from .deps import LoginRequired
-from .routers import account, admin, auth, kosync, library, opds
+from .routers import account, admin, auth, kosync, library, opds, stats, webdav
 from .storage import Storage
 from .templating import render
 
@@ -34,7 +34,7 @@ def create_app(settings: Settings | None = None) -> FastAPI:
     app.state.sessionmaker = init_database(settings.database_url)
 
     app.mount("/static", StaticFiles(directory=STATIC_DIR), name="static")
-    for module in (auth, library, account, admin, kosync, opds):
+    for module in (auth, library, stats, account, admin, kosync, opds, webdav):
         app.include_router(module.router)
 
     app.add_exception_handler(kosync.KosyncError, kosync.kosync_error_handler)

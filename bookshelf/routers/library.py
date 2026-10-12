@@ -9,7 +9,7 @@ from fastapi.responses import JSONResponse, RedirectResponse, Response
 
 from ..deps import DB, AppSettings, AppStorage, CurrentUser
 from ..models import User
-from ..services import library
+from ..services import library, reading_stats
 from ..services.library import BookEntry
 from ..services.metadata.base import parse_float
 from ..templating import render
@@ -110,9 +110,26 @@ def upload_book(
 
 
 @router.get("/books/{book_id}")
-def book_page(request: Request, db: DB, user: CurrentUser, book_id: int) -> Response:
+def book_page(
+    request: Request, db: DB, user: CurrentUser, storage: AppStorage, book_id: int
+) -> Response:
     entry = _entry_or_404(db, user, book_id)
-    return render(request, "book.html", user=user, nav="library", entry=entry, book=entry.book)
+    stats = reading_stats.book_stats(
+        reading_stats.statistics_path(storage, user.id), entry.book.partial_md5
+    )
+    seconds_left = None
+    if stats and entry.status == "reading":
+        seconds_left = stats.seconds_left(entry.progress.percentage)
+    return render(
+        request,
+        "book.html",
+        user=user,
+        nav="library",
+        entry=entry,
+        book=entry.book,
+        stats=stats,
+        seconds_left=seconds_left,
+    )
 
 
 @router.post("/books/{book_id}")

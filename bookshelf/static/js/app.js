@@ -38,6 +38,11 @@
     }
   });
 
+  // Horizontally scrolling areas that should start at their end (e.g. the reading calendar).
+  document.querySelectorAll("[data-scroll-end]").forEach((element) => {
+    element.scrollLeft = element.scrollWidth;
+  });
+
   document.addEventListener("submit", (event) => {
     const message = event.target.dataset.confirm;
     if (message && !window.confirm(message)) event.preventDefault();

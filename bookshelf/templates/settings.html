@@ -44,6 +44,20 @@
     </ol>
   </section>
 
+  <section class="card" id="statistics">
+    <h2>{{ icon('chart', 18) }} Reading statistics</h2>
+    <p class="card-sub">Sync KOReader’s reading statistics to see your reading time, streaks and activity.</p>
+    <div class="field">
+      <label for="webdav-url">WebDAV address</label>
+      {{ copy_field('webdav-url', webdav_url) }}
+    </div>
+    <ol class="steps">
+      <li>In KOReader’s file browser, open <strong>Cloud storage</strong>, tap <strong>+</strong> and add a <strong>WebDAV</strong> server with the address above and your Bookshelf username and password. Leave the folder empty.</li>
+      <li>Open a book, then <strong>Tools → Reading statistics → Settings → Cloud sync</strong>, pick that server and choose its main folder.</li>
+      <li>Run <strong>Synchronize now</strong> (or let KOReader sync automatically). Repeat steps 1–2 on each device; KOReader merges their statistics.</li>
+    </ol>
+  </section>
+
   <section class="card">
     <h2>{{ icon('key', 18) }} Change password</h2>
     <p class="card-sub">Your password is also used by KOReader and OPDS.</p>

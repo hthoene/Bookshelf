@@ -5,6 +5,7 @@ from __future__ import annotations
 import hashlib
 import re
 from datetime import UTC, datetime
+from functools import lru_cache
 from pathlib import Path
 
 from fastapi import Request
@@ -81,8 +82,37 @@ def timestamp(value: datetime) -> int:
     return int(value.replace(tzinfo=UTC).timestamp())
 
 
+def duration(seconds: int | float | None) -> str:
+    """Human reading time: "45 min", "3 h 20 min", "120 h"."""
+    minutes = round((seconds or 0) / 60)
+    if minutes < 1:
+        return "<1 min" if seconds else "0 min"
+    hours, minutes = divmod(minutes, 60)
+    if not hours:
+        return f"{minutes} min"
+    if minutes == 0 or hours >= 100:
+        return f"{hours} h"
+    return f"{hours} h {minutes} min"
+
+
+def thousands(value: int) -> str:
+    return f"{value:,}"
+
+
+STATIC_DIR = Path(__file__).parent / "static"
+
+
+@lru_cache(maxsize=64)
+def _static_version(path: str) -> str:
+    """Content hash, so browsers fetch assets again whenever they change."""
+    try:
+        return hashlib.md5((STATIC_DIR / path).read_bytes()).hexdigest()[:10]
+    except OSError:
+        return __version__
+
+
 def static_url(path: str) -> str:
-    return f"/static/{path}?v={__version__}"
+    return f"/static/{path}?v={_static_version(path)}"
 
 
 templates = Jinja2Templates(directory=TEMPLATES_DIR)
@@ -95,6 +125,8 @@ templates.env.filters.update(
     hue=hue,
     paragraphs=paragraphs,
     timestamp=timestamp,
+    duration=duration,
+    thousands=thousands,
 )
 templates.env.globals.update(
     icon=icon,

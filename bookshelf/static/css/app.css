@@ -463,6 +463,46 @@ textarea.input { height: auto; min-height: 120px; padding: 10px 12px; line-heigh
 .badge { display: inline-block; margin-left: 6px; padding: 2px 8px; border-radius: 99px; background: var(--accent-soft); color: var(--accent); font-size: 11.5px; font-weight: 700; }
 .row-actions { display: flex; justify-content: flex-end; gap: 6px; }
 
+/* ---------- Statistics ---------- */
+
+.stat-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 14px; margin-bottom: 20px; }
+.stat-tile { display: grid; gap: 4px; padding: 18px 20px; border: 1px solid var(--border); border-radius: var(--radius); background: var(--surface); }
+.stat-label { color: var(--muted); font-size: 13px; font-weight: 600; }
+.stat-value { font-family: var(--font-serif); font-size: 28px; font-weight: 600; letter-spacing: -0.01em; line-height: 1.15; }
+.stat-tiles + .card, .stat-page .card + .card { margin-top: 20px; }
+
+.heatmap { overflow-x: auto; padding-bottom: 6px; scrollbar-width: thin; scrollbar-color: var(--border) transparent; }
+/* Columns grow to fill the card; below ~11px per week the calendar scrolls instead. */
+.heatmap-weeks { display: grid; grid-template-columns: repeat(var(--weeks, 53), minmax(11px, 1fr)); gap: 3px; }
+.heat-week { display: grid; grid-template-columns: minmax(0, 1fr); grid-template-rows: 16px; gap: 3px; }
+/* Labels overflow into the next weeks instead of widening their own column. */
+.heat-month { width: 0; overflow: visible; color: var(--muted); font-size: 11px; line-height: 14px; white-space: nowrap; }
+.heat { display: block; width: 100%; aspect-ratio: 1; border-radius: 3px; background: var(--surface-2); }
+.heat-legend .heat { width: 12px; }
+.heat.l1 { background: color-mix(in srgb, var(--accent) 30%, var(--surface-2)); }
+.heat.l2 { background: color-mix(in srgb, var(--accent) 55%, var(--surface-2)); }
+.heat.l3 { background: color-mix(in srgb, var(--accent) 80%, var(--surface-2)); }
+.heat.l4 { background: var(--accent); }
+.heat.future { background: none; }
+.heat-legend { display: flex; align-items: center; justify-content: flex-end; gap: 3px; margin-top: 10px; color: var(--muted); font-size: 12px; }
+.heat-legend .heat:first-of-type { margin-left: 4px; }
+.heat-legend .heat:last-of-type { margin-right: 4px; }
+
+.stat-books { display: grid; margin: 0 -12px; padding: 0; list-style: none; }
+.stat-book { display: flex; align-items: center; gap: 14px; padding: 10px 12px; border-radius: var(--radius-sm); }
+a.stat-book:hover { background: var(--surface-2); }
+.stat-book-cover { width: 40px; flex: none; }
+.stat-book-cover .ph-title, .stat-book-cover .ph-author { display: none; }
+.stat-book-info { flex: 1; min-width: 0; }
+.stat-book-info .book-title { -webkit-line-clamp: 1; }
+.stat-book-numbers { display: grid; flex: none; justify-items: end; gap: 2px; text-align: right; }
+.stat-book-numbers strong { font-size: 15px; }
+.stat-book-numbers span { color: var(--muted); font-size: 12.5px; }
+.stats-empty .steps { margin-top: 0; }
+.reading-time { margin-top: 4px; }
+code { padding: 1px 6px; border-radius: 6px; background: var(--surface-2); overflow-wrap: anywhere; }
+.link { color: var(--accent); text-decoration: underline; text-underline-offset: 2px; }
+
 /* ---------- Upload ---------- */
 
 .drop-overlay {
@@ -534,6 +574,10 @@ textarea.input { height: auto; min-height: 120px; padding: 10px 12px; line-heigh
   .detail-cover { position: static; width: min(200px, 55vw); margin: 0 auto; }
   .detail-info { text-align: left; }
   .form-row { grid-template-columns: 1fr; }
+  .stat-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
+  .stat-tile { padding: 14px 16px; }
+  .stat-value { font-size: 23px; }
+  .stat-book-numbers span { display: none; }
   .card { padding: 20px; }
   .upload-panel { right: 16px; bottom: 16px; }
 }

@@ -3,6 +3,7 @@
 <data_dir>/books/<user_id>/<uuid>.<ext>   uploaded book files
 <data_dir>/covers/<book_id>.jpg           cover thumbnails
 <data_dir>/tmp/                           in-progress uploads
+<data_dir>/files/<user_id>/               WebDAV files (e.g. KOReader statistics)
 """
 
 from __future__ import annotations
@@ -20,9 +21,10 @@ class Storage:
         self.books_dir = root / "books"
         self.covers_dir = root / "covers"
         self.tmp_dir = root / "tmp"
+        self.files_dir = root / "files"
 
     def ensure_dirs(self) -> None:
-        for directory in (self.books_dir, self.covers_dir, self.tmp_dir):
+        for directory in (self.books_dir, self.covers_dir, self.tmp_dir, self.files_dir):
             directory.mkdir(parents=True, exist_ok=True)
 
     def new_temp_path(self) -> Path:
@@ -46,5 +48,9 @@ class Storage:
         self.book_path(book).unlink(missing_ok=True)
         self.cover_path(book.id).unlink(missing_ok=True)
 
+    def user_files_dir(self, user_id: int) -> Path:
+        return self.files_dir / str(user_id)
+
     def delete_user_dir(self, user_id: int) -> None:
         shutil.rmtree(self.books_dir / str(user_id), ignore_errors=True)
+        shutil.rmtree(self.user_files_dir(user_id), ignore_errors=True)

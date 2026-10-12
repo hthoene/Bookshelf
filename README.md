@@ -12,8 +12,8 @@ Everything runs in one small Docker container with a single SQLite database.
     <td width="50%"><img src="docs/screenshots/library-dark.png" alt="Library in dark mode"></td>
   </tr>
   <tr>
-    <td><img src="docs/screenshots/settings.png" alt="KOReader sync and OPDS setup"></td>
-    <td><img src="docs/screenshots/search.png" alt="Instant search"></td>
+    <td><img src="docs/screenshots/stats.png" alt="Reading statistics synced from KOReader"></td>
+    <td><img src="docs/screenshots/settings.png" alt="KOReader sync, OPDS and statistics setup"></td>
   </tr>
 </table>
 
@@ -21,6 +21,8 @@ Everything runs in one small Docker container with a single SQLite database.
   <img src="docs/screenshots/mobile-library.png" alt="Library on a phone" width="260">
   &nbsp;&nbsp;
   <img src="docs/screenshots/mobile-book.png" alt="Book details on a phone" width="260">
+  &nbsp;&nbsp;
+  <img src="docs/screenshots/mobile-stats.png" alt="Reading statistics on a phone" width="260">
 </p>
 
 ## Features
@@ -31,6 +33,8 @@ Everything runs in one small Docker container with a single SQLite database.
 - **KOReader progress sync.** Built-in server that is compatible with KOReader's *Progress sync* plugin.
   Your library shows reading progress, a *Continue reading* row, and Reading/Unread/Finished filters.
 - **OPDS catalog.** Browse, search and download your books directly from your e-reader.
+- **Reading statistics.** Sync KOReader's reading statistics via the built-in WebDAV server to see
+  total reading time, streaks, a reading calendar, time per book and an estimate of the time left.
 - **Multiple users.** Every user has a private library. Admins manage accounts.
 - **Clean, responsive UI.** Works on phones, tablets and desktops, in light and dark mode.
   No build step and no JavaScript framework.
@@ -66,6 +70,7 @@ Set these in `.env` (see [.env.example](.env.example)). All of them are optional
 | `BOOKSHELF_MAX_UPLOAD_MB` | `200` | Maximum size of a single upload |
 | `BOOKSHELF_SESSION_DAYS` | `30` | How long a web login lasts |
 | `BOOKSHELF_SECURE_COOKIES` | `false` | Set to `true` when served over HTTPS |
+| `TZ` | `UTC` | Time zone for reading statistics, e.g. `Europe/Berlin` |
 
 When running without Docker Compose, `BOOKSHELF_DATA_DIR` (default `./data`, `/data` in the
 image) and `BOOKSHELF_PORT` (default `8080`) control the storage location and listening port.
@@ -87,6 +92,17 @@ Bookshelf username and password. Keep the default document matching (*Binary*).
 
 **OPDS catalog.** In the file browser, open *Search → OPDS catalog*, tap **+** and add
 `http://<your-server>:8080/opds` with your Bookshelf username and password.
+
+**Reading statistics.** KOReader keeps its statistics on the device and syncs them through a cloud
+storage server. Bookshelf provides one at `/webdav`:
+
+1. In the file browser, open *Cloud storage*, tap **+** and add a *WebDAV* server with the address
+   `http://<your-server>:8080/webdav` and your Bookshelf username and password.
+2. Open a book, go to *Tools → Reading statistics → Settings → Cloud sync*, choose that server and
+   its main folder, then run *Synchronize now*.
+
+Do this on every device. KOReader merges the statistics of all devices; Bookshelf only reads the
+synced `statistics.sqlite3`. Menu names can differ slightly between KOReader versions.
 
 > Run Bookshelf behind a reverse proxy with HTTPS if you want to reach it from outside your
 > home network. KOReader and OPDS clients send your credentials with every request.

@@ -234,6 +234,16 @@ def continue_reading(db: Session, user: User) -> list[BookEntry]:
     ).entries
 
 
+def books_by_document(db: Session, user: User, documents: list[str]) -> dict[str, Book]:
+    """``user``'s books keyed by partial MD5 (KOReader's document id), for the given ids."""
+    if not documents:
+        return {}
+    books = db.scalars(
+        select(Book).where(Book.user_id == user.id, Book.partial_md5.in_(set(documents)))
+    )
+    return {book.partial_md5: book for book in books}
+
+
 def get_entry(db: Session, user: User, book_id: int) -> BookEntry | None:
     statement = _scoped(select(Book, _by_hash, _by_name), user).where(Book.id == book_id)
     entries = _entries(db, statement)

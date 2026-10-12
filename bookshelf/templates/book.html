@@ -23,6 +23,9 @@
       </div>
       <div class="progress progress-lg" role="progressbar" aria-valuenow="{{ entry.percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ entry.percent }}%"></span></div>
       <p class="muted small">{{ icon('sync', 14) }} Synced {{ entry.last_read|timeago }}{% if entry.progress.device %} from {{ entry.progress.device }}{% endif %}</p>
+      {% if stats %}
+      <p class="muted small reading-time">{{ icon('chart', 14) }} {{ stats.seconds|duration }} read{% if seconds_left %} · about {{ seconds_left|duration }} left{% endif %}</p>
+      {% endif %}
       {% else %}
       <p class="muted small no-margin">{{ icon('sync', 14) }} Not started yet. Progress appears here as soon as KOReader syncs.</p>
       {% endif %}

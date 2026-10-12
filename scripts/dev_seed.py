@@ -3,7 +3,8 @@
     python scripts/dev_seed.py [--url http://localhost:8765]
 
 Creates the admin account "demo" / "demo1234" on a fresh instance (or logs in with it),
-uploads generated EPUBs of public-domain classics and reports KOReader progress for some.
+uploads generated EPUBs of public-domain classics, reports KOReader progress for some and
+uploads a generated KOReader statistics database via WebDAV, like a real device would.
 """
 
 from __future__ import annotations
@@ -11,9 +12,13 @@ from __future__ import annotations
 import argparse
 import hashlib
 import io
+import random
+import sqlite3
 import sys
 import tempfile
 import zipfile
+from contextlib import closing
+from datetime import UTC, datetime, timedelta
 from pathlib import Path
 from xml.sax.saxutils import escape
 
@@ -161,6 +166,62 @@ def make_cover(title: str, author: str, top, bottom) -> bytes:
     return out.getvalue()
 
 
+STATS_SCHEMA = """
+CREATE TABLE book (id integer PRIMARY KEY autoincrement, title text, authors text, notes integer,
+    last_open integer, highlights integer, pages integer, series text, language text, md5 text,
+    total_read_time integer, total_read_pages integer);
+CREATE TABLE page_stat_data (id_book integer, page integer NOT NULL DEFAULT 0,
+    start_time integer NOT NULL DEFAULT 0, duration integer NOT NULL DEFAULT 0,
+    total_pages integer NOT NULL DEFAULT 0, UNIQUE (id_book, page, start_time));
+"""
+PAGES = 320
+
+
+def make_statistics(read_books: list[tuple[str, str, str, float]]) -> bytes:
+    """A KOReader statistics.sqlite3 for (title, author, md5, progress) tuples.
+
+    The history is generated backwards from today: the books in progress were read most
+    recently (in turns), the finished ones before that. The last days are always active, so the
+    demo shows a reading streak.
+    """
+    rng = random.Random(7)
+    current = [b for b in read_books if b[3] < 1]
+    finished = [b for b in read_books if b[3] >= 1]
+    last_page = {b[2]: PAGES if b[3] >= 1 else int(PAGES * b[3]) for b in read_books}
+    rows: dict[str, list[tuple[int, int, int]]] = {b[2]: [] for b in read_books}
+
+    today = datetime.now(UTC).replace(hour=18, minute=0, second=0, microsecond=0)
+    day = today
+    while any(last_page.values()):
+        if rng.random() < 0.7 or today - day < timedelta(days=6):
+            pending = [b for b in current if last_page[b[2]]]
+            book = rng.choice(pending) if pending else next(b for b in finished if last_page[b[2]])
+            count = min(rng.randint(12, 55), last_page[book[2]])
+            start = int(day.timestamp()) + rng.randint(-4, 2) * 1800
+            for page in range(last_page[book[2]] - count + 1, last_page[book[2]] + 1):
+                seconds = rng.randint(55, 110)
+                rows[book[2]].append((start, page, seconds))
+                start += seconds
+            last_page[book[2]] -= count
+        day -= timedelta(days=1)
+
+    with tempfile.TemporaryDirectory() as tmp:
+        path = Path(tmp, "statistics.sqlite3")
+        with closing(sqlite3.connect(path)) as conn:
+            conn.executescript(STATS_SCHEMA)
+            for title, author, md5, _ in read_books:
+                book_id = conn.execute(
+                    "INSERT INTO book (title, authors, md5, pages, last_open) VALUES (?,?,?,?,?)",
+                    (title, author, md5, PAGES, 0),
+                ).lastrowid
+                conn.executemany(
+                    "INSERT INTO page_stat_data VALUES (?, ?, ?, ?, ?)",
+                    [(book_id, page, start, secs, PAGES) for start, page, secs in rows[md5]],
+                )
+            conn.commit()
+        return path.read_bytes()
+
+
 def main() -> None:
     parser = argparse.ArgumentParser()
     parser.add_argument("--url", default="http://localhost:8765")
@@ -174,6 +235,7 @@ def main() -> None:
             "x-auth-user": USERNAME,
             "x-auth-key": hashlib.md5(PASSWORD.encode()).hexdigest(),
         }
+        read_books = []
         for title, author, series, colours, progress, device in BOOKS:
             data = make_epub(title, author, series, colours)
             filename = f"{author} - {title}.epub"
@@ -185,6 +247,7 @@ def main() -> None:
                 path = Path(tmp, "book.epub")
                 path.write_bytes(data)
                 document = partial_md5(path)
+            read_books.append((title, author, document, progress))
             client.put(
                 "/syncs/progress",
                 headers=sync_headers,
@@ -196,6 +259,13 @@ def main() -> None:
                     "device_id": device.lower().replace(" ", "-"),
                 },
             )
+
+        response = client.put(
+            "/webdav/statistics.sqlite3",
+            content=make_statistics(read_books),
+            auth=(USERNAME, PASSWORD),
+        )
+        print(f"{response.status_code} statistics.sqlite3")
 
 
 if __name__ == "__main__":

@@ -6,11 +6,12 @@ from collections.abc import Iterator
 from typing import Annotated
 
 from fastapi import Depends, HTTPException, Request, Response
+from fastapi.security import HTTPBasic, HTTPBasicCredentials
 from sqlalchemy.orm import Session
 
 from .config import Settings
 from .models import User
-from .services import sessions
+from .services import sessions, users
 from .storage import Storage
 
 SESSION_COOKIE = "bookshelf_session"
@@ -62,6 +63,27 @@ def admin_user(user: CurrentUser) -> User:
 
 
 AdminUser = Annotated[User, Depends(admin_user)]
+
+_basic = HTTPBasic(realm="Bookshelf", auto_error=False)
+
+
+def basic_auth_user(
+    db: DB, credentials: Annotated[HTTPBasicCredentials | None, Depends(_basic)]
+) -> User:
+    """HTTP Basic authentication for device clients (OPDS, WebDAV). Never uses cookies."""
+    user = (
+        users.authenticate(db, credentials.username, credentials.password) if credentials else None
+    )
+    if user is None:
+        raise HTTPException(
+            status_code=401,
+            detail="Authentication required.",
+            headers={"WWW-Authenticate": 'Basic realm="Bookshelf"'},
+        )
+    return user
+
+
+BasicAuthUser = Annotated[User, Depends(basic_auth_user)]
 
 
 def set_session_cookie(response: Response, token: str, settings: Settings) -> None:

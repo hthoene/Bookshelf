@@ -29,6 +29,9 @@ _PATHS: dict[str, str] = {
     "sync": '<path d="M21 12a9 9 0 0 1-15.5 6.2L3 16"/><path d="M3 12a9 9 0 0 1 15.5-6.2L21 8"/>'
     '<path d="M21 3v5h-5M3 21v-5h5"/>',
     "key": '<circle cx="7.5" cy="15.5" r="4.5"/><path d="m10.7 12.3 9.8-9.8M17 6l3 3M14 9l2 2"/>',
+    "chart": '<path d="M3 3v18h18"/><path d="M8 17v-5M13 17V8M18 17v-9"/>',
+    "calendar": '<rect x="3" y="5" width="18" height="16" rx="2"/>'
+    '<path d="M3 10h18M8 3v4M16 3v4"/>',
     "catalog": '<path d="M3 5h6v14H3zM9 5h6v14H9z"/><path d="m15 6 4.5-1 3 13.5-4.5 1z"/>',
 }
 
