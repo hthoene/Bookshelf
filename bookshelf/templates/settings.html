@@ -44,6 +44,23 @@
     </ol>
   </section>
 
+  <section class="card" id="sync-books">
+    <h2>{{ icon('tablet', 18) }} Books on your e-reader</h2>
+    <p class="card-sub">KOReader can download books automatically into a folder on your e-reader. Choose what it should keep in sync: your whole library, or only a selection.</p>
+    {% for id, label, url in sync_feeds %}
+    <div class="field">
+      <label for="{{ id }}">{{ label }}{% if id == 'sync-marked' %} <span class="muted">· {{ device_count }} marked, use “Send to e-reader” on a book{% if device_count %} · <a class="link" href="/?device=true">show</a>{% endif %}</span>{% endif %}</label>
+      {{ copy_field(id, url) }}
+    </div>
+    {% endfor %}
+    <ol class="steps">
+      <li>In KOReader’s file browser, open <strong>Search → OPDS catalog</strong>, tap <strong>+</strong> and add a catalog with one of the addresses above and your Bookshelf username and password. Enable <strong>Sync catalog</strong>.</li>
+      <li>In the OPDS catalog menu, choose the folder for synced books.</li>
+      <li>Run <strong>Sync</strong> (for example by long-pressing the catalog). KOReader downloads the books added since the last sync, newest first.</li>
+    </ol>
+    <p class="small muted sync-note">KOReader downloads at most 50 books per sync by default. Raise that limit for the first sync of a large library, or use <strong>Force sync</strong>. Books removed in Bookshelf stay on the e-reader.</p>
+  </section>
+
   <section class="card" id="statistics">
     <h2>{{ icon('chart', 18) }} Reading statistics</h2>
     <p class="card-sub">Sync KOReader’s reading statistics to see your reading time, streaks and activity.</p>

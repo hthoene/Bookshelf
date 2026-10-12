@@ -1,13 +1,21 @@
 {% from "_macros.html" import cover %}
 <div id="library">
   {% if has_books %}
-  <div class="pills" role="radiogroup" aria-label="Reading status">
+  <div class="pills">
+    <div class="pill-group" role="radiogroup" aria-label="Reading status">
     {% for key, label in status_labels.items() %}
     <label class="pill">
       <input type="radio" name="status" value="{{ key }}" {{ 'checked' if status == key }}>
       <span>{{ label }} <small>{{ counts[key] }}</small></span>
     </label>
     {% endfor %}
+    </div>
+    {% if device_count or device %}
+    <label class="pill pill-toggle" title="Books marked to sync to your e-reader">
+      <input type="checkbox" name="device" value="true" {{ 'checked' if device }}>
+      <span>{{ icon('tablet', 15) }} On e-reader <small>{{ device_count }}</small></span>
+    </label>
+    {% endif %}
   </div>
   {% endif %}
 

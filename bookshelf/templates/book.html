@@ -33,6 +33,15 @@
 
     <div class="actions">
       <a class="btn btn-primary" href="/books/{{ book.id }}/file" download>{{ icon('download', 18) }} Download</a>
+      <form method="post" action="/books/{{ book.id }}/device">
+        {% if book.device_sync_at %}
+        <input type="hidden" name="enabled" value="false">
+        <button class="btn btn-toggle is-on" aria-pressed="true" title="Remove from the e-reader sync list">{{ icon('check', 18) }} On e-reader</button>
+        {% else %}
+        <input type="hidden" name="enabled" value="true">
+        <button class="btn btn-toggle" aria-pressed="false" title="Sync this book to your e-reader via OPDS">{{ icon('tablet', 18) }} Send to e-reader</button>
+        {% endif %}
+      </form>
       <button type="button" class="btn" data-dialog-open="edit-dialog">{{ icon('edit', 18) }} Edit</button>
       <form method="post" action="/books/{{ book.id }}/delete" data-confirm="Delete “{{ book.title }}”? This can’t be undone.">
         <button class="btn btn-danger">{{ icon('trash', 18) }} Delete</button>

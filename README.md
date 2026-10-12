@@ -33,6 +33,8 @@ Everything runs in one small Docker container with a single SQLite database.
 - **KOReader progress sync.** Built-in server that is compatible with KOReader's *Progress sync* plugin.
   Your library shows reading progress, a *Continue reading* row, and Reading/Unread/Finished filters.
 - **OPDS catalog.** Browse, search and download your books directly from your e-reader.
+- **Books on your e-reader.** Let KOReader keep your whole library, your unread books or a hand-picked
+  selection ("Send to e-reader") in sync on the device automatically.
 - **Reading statistics.** Sync KOReader's reading statistics via the built-in WebDAV server to see
   total reading time, streaks, a reading calendar, time per book and an estimate of the time left.
 - **Multiple users.** Every user has a private library. Admins manage accounts.
@@ -92,6 +94,20 @@ Bookshelf username and password. Keep the default document matching (*Binary*).
 
 **OPDS catalog.** In the file browser, open *Search → OPDS catalog*, tap **+** and add
 `http://<your-server>:8080/opds` with your Bookshelf username and password.
+
+**Books on your e-reader (OPDS sync).** KOReader can download new books from a catalog into a
+folder automatically. Add a second OPDS catalog with one of these addresses and enable
+*Sync catalog*:
+
+| Address | Keeps on the e-reader |
+| --- | --- |
+| `http://<your-server>:8080/opds/sync` | Books you marked with *Send to e-reader* |
+| `http://<your-server>:8080/opds/books?sort=recent` | Your whole library |
+| `http://<your-server>:8080/opds/books?status=unread&sort=recent` | Books you haven't started |
+
+Choose a sync folder in KOReader's OPDS menu and run *Sync*. KOReader downloads the books added
+since the last sync (at most 50 per run by default; raise the limit or use *Force sync* for a large
+first sync). Books removed in Bookshelf are not deleted from the device.
 
 **Reading statistics.** KOReader keeps its statistics on the device and syncs them through a cloud
 storage server. Bookshelf provides one at `/webdav`:

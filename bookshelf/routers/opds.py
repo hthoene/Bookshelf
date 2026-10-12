@@ -26,6 +26,12 @@ PAGE_SIZE = 50
 # (id, title, description, query string) of the sections on the catalog start page.
 _SECTIONS = [
     (
+        "device",
+        "Marked for e-reader",
+        "Books you marked with “Send to e-reader”",
+        "device=1&sort=device",
+    ),
+    (
         "reading",
         "Continue reading",
         "Books you are currently reading",
@@ -63,24 +69,58 @@ def catalog_books(
     q: str = "",
     status: str = "all",
     sort: str = "recent",
+    device: bool = False,
     page: int = 1,
+) -> Response:
+    titles = {key: section_title for key, section_title, *_ in _SECTIONS}
+    if q:
+        title = f"Search: {q}"
+    elif device:
+        title = titles["device"]
+    else:
+        title = titles.get(status) or titles.get(sort) or "Books"
+    return _acquisition_feed(request, db, user, title, q, status, sort, device, page)
+
+
+@router.get("/sync")
+def catalog_sync(request: Request, db: DB, user: BasicAuthUser, page: int = 1) -> Response:
+    """Books marked for e-readers, most recently marked first (for KOReader's OPDS sync)."""
+    title = "Marked for e-reader"
+    return _acquisition_feed(request, db, user, title, "", "all", "device", True, page)
+
+
+def _acquisition_feed(
+    request: Request,
+    db: DB,
+    user: BasicAuthUser,
+    title: str,
+    q: str,
+    status: str,
+    sort: str,
+    device: bool,
+    page: int,
 ) -> Response:
     page = max(page, 1)
     result = library.find_books(
-        db, user, text=q, status=status, sort=sort, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
+        db,
+        user,
+        text=q,
+        status=status,
+        sort=sort,
+        device_only=device,
+        limit=PAGE_SIZE,
+        offset=(page - 1) * PAGE_SIZE,
     )
     next_url = None
     if result.has_more:
         url = request.url.include_query_params(page=page + 1)
         next_url = f"{url.path}?{url.query}"
-    titles = {key: section_title for key, section_title, *_ in _SECTIONS}
-    title = f"Search: {q}" if q else titles.get(status) or titles.get(sort) or "Books"
     return render(
         request,
         "opds/feed.xml",
         media_type=ACQUISITION,
         title=title,
-        feed_id=f"books:{request.url.query or 'all'}",
+        feed_id=f"{request.url.path}:{request.url.query or 'all'}",
         self_url=f"{request.url.path}?{request.url.query}",
         next_url=next_url,
         entries=result.entries,

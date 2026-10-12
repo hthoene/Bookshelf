@@ -165,6 +165,8 @@ _ORDER_BY = {
         Book.id,
     ),
     "last_read": (_last_read.desc().nulls_last(), Book.created_at.desc(), Book.id.desc()),
+    # Most recently marked first: KOReader's OPDS sync expects the newest entry at the top.
+    "device": (Book.device_sync_at.desc().nulls_last(), Book.id.desc()),
 }
 
 
@@ -206,13 +208,19 @@ def find_books(
     text: str = "",
     status: str = "all",
     sort: str = "recent",
+    device_only: bool = False,
     limit: int = 60,
     offset: int = 0,
 ) -> BookPage:
-    """One page of ``user``'s books matching the search ``text`` and reading ``status``."""
+    """One page of ``user``'s books matching the search ``text`` and reading ``status``.
+
+    ``device_only`` restricts the result to books marked for syncing to e-readers.
+    """
     statement = _scoped(select(Book, _by_hash, _by_name), user, text)
     if status in STATUSES and status != "all":
         statement = statement.where(_status == status)
+    if device_only:
+        statement = statement.where(Book.device_sync_at.is_not(None))
     statement = statement.order_by(*_ORDER_BY.get(sort, _ORDER_BY["recent"]))
     # Fetch one extra row to know whether another page exists without a COUNT query.
     entries = _entries(db, statement.limit(limit + 1).offset(offset))
@@ -226,6 +234,12 @@ def count_by_status(db: Session, user: User, text: str = "") -> dict[str, int]:
         counts[status] = count
         counts["all"] += count
     return counts
+
+
+def count_device_books(db: Session, user: User, text: str = "") -> int:
+    """Number of books marked for e-reader sync (matching the search ``text``)."""
+    statement = _scoped(select(func.count(Book.id)).select_from(Book), user, text)
+    return db.scalar(statement.where(Book.device_sync_at.is_not(None))) or 0
 
 
 def continue_reading(db: Session, user: User) -> list[BookEntry]:
@@ -271,6 +285,15 @@ def replace_cover(db: Session, storage: Storage, book: Book, data: bytes) -> Non
         raise LibraryError("The cover image could not be read.")
     book.has_cover = True
     book.updated_at = utcnow()  # changes the cover URL, so browsers fetch the new image
+    db.commit()
+
+
+def set_device_sync(db: Session, book: Book, enabled: bool) -> None:
+    """Mark or unmark a book for syncing to e-readers via the OPDS sync feed."""
+    if enabled and book.device_sync_at is None:
+        book.device_sync_at = utcnow()
+    elif not enabled:
+        book.device_sync_at = None
     db.commit()
 
 

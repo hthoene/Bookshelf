@@ -243,6 +243,8 @@ def main() -> None:
             print(f"{response.status_code} {title}")
             if progress is None:
                 continue
+            if progress < 1:  # books in progress are kept on the e-reader
+                client.post(f"/books/{response.json()['id']}/device", data={"enabled": "true"})
             with tempfile.TemporaryDirectory() as tmp:
                 path = Path(tmp, "book.epub")
                 path.write_bytes(data)

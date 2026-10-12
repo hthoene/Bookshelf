@@ -2,9 +2,13 @@
 <a class="book-card" href="/books/{{ entry.book.id }}">
   <div class="cover-frame">
     {{ cover(entry.book) }}
-    {% if entry.status == 'finished' %}
-    <span class="badge-done" title="Finished">{{ icon('check', 14) }}</span>
-    {% elif entry.status == 'reading' %}
+    {% if entry.book.device_sync_at or entry.status == 'finished' %}
+    <div class="cover-badges">
+      {% if entry.book.device_sync_at %}<span class="badge-device" title="Marked for e-reader">{{ icon('tablet', 13) }}</span>{% endif %}
+      {% if entry.status == 'finished' %}<span class="badge-done" title="Finished">{{ icon('check', 14) }}</span>{% endif %}
+    </div>
+    {% endif %}
+    {% if entry.status == 'reading' %}
     <div class="cover-progress" title="{{ entry.percent }}% read"><span style="width: {{ entry.percent }}%"></span></div>
     {% endif %}
   </div>

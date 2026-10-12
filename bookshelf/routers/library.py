@@ -35,13 +35,21 @@ def library_page(
     q: str = "",
     status: str = "all",
     sort: str = "recent",
+    device: bool = False,
     page: int = 1,
 ) -> Response:
     status = status if status in library.STATUSES else "all"
     sort = sort if sort in library.SORTS else "recent"
     page = max(page, 1)
     result = library.find_books(
-        db, user, text=q, status=status, sort=sort, limit=PAGE_SIZE, offset=(page - 1) * PAGE_SIZE
+        db,
+        user,
+        text=q,
+        status=status,
+        sort=sort,
+        device_only=device,
+        limit=PAGE_SIZE,
+        offset=(page - 1) * PAGE_SIZE,
     )
     next_url = None
     if result.has_more:
@@ -63,13 +71,15 @@ def library_page(
         )
 
     counts = library.count_by_status(db, user, q)
-    show_shelf = not q and status == "all" and page == 1
+    show_shelf = not q and status == "all" and not device and page == 1
     context = {
         "user": user,
         "nav": "library",
         "q": q,
         "status": status,
         "sort": sort,
+        "device": device,
+        "device_count": library.count_device_books(db, user, q),
         "entries": result.entries,
         "next_url": next_url,
         "counts": counts,
@@ -177,6 +187,15 @@ def update_book(
                     book=entry.book,
                     error=str(exc),
                 )
+    return RedirectResponse(f"/books/{book_id}", status_code=303)
+
+
+@router.post("/books/{book_id}/device")
+def toggle_device_sync(
+    db: DB, user: CurrentUser, book_id: int, enabled: Annotated[bool, Form()]
+) -> Response:
+    entry = _entry_or_404(db, user, book_id)
+    library.set_device_sync(db, entry.book, enabled)
     return RedirectResponse(f"/books/{book_id}", status_code=303)
 
 

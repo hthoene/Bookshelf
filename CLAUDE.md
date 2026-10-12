@@ -74,6 +74,10 @@ scripts/dev_seed.py  demo data for local development
   The library connects progress to books through `Book.partial_md5` / `Book.filename_md5`.
 - **OPDS** (`routers/opds.py`): OPDS 1.2 Atom feeds with HTTP Basic auth. Feeds must stay
   well-formed XML, so test with `ElementTree` when you change templates.
+- **OPDS sync feeds** (`/opds/sync`, `/opds/books?sort=recent`): KOReader's catalog sync reads
+  the catalog URL, follows `rel="next"`, assumes the newest entry comes first and stops at the
+  acquisition href it downloaded last. Keep these feeds newest-first with stable
+  `/opds/books/<id>/file` hrefs (`/opds/sync` orders by `Book.device_sync_at`).
 - **WebDAV** (`routers/webdav.py`): KOReader's cloud storage parses PROPFIND responses with Lua
   patterns (`<…response…>`, `<…href…>`, `<…collection…>`) and syncs with GET + ETag, then PUT with
   `If-Match` (412 on mismatch). Keep hrefs as absolute paths and keep the store flat.

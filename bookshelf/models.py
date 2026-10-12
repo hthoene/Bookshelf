@@ -80,6 +80,8 @@ class Book(Base):
     partial_md5: Mapped[str] = mapped_column(String(32), index=True)
     filename_md5: Mapped[str] = mapped_column(String(32), index=True)
     has_cover: Mapped[bool] = mapped_column(default=False)
+    # When the book was marked for syncing to e-readers (OPDS /opds/sync); None = not marked.
+    device_sync_at: Mapped[datetime | None]
 
     created_at: Mapped[datetime] = mapped_column(default=utcnow)
     updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
