@@ -400,7 +400,7 @@ textarea.input { height: auto; min-height: 120px; padding: 10px 12px; line-heigh
   color: var(--muted);
   text-align: center;
 }
-.empty .icon { color: var(--accent); }
+.empty > .icon { color: var(--accent); }
 .empty h2 { color: var(--text); font-family: var(--font-serif); font-size: 26px; font-weight: 600; }
 .empty p { max-width: 420px; margin-bottom: 8px; }
 .empty-hint { padding: 48px 0; color: var(--muted); text-align: center; }
