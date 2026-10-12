@@ -11,6 +11,9 @@ build/
 data/
 data-*/
 
+# Local configuration
+.env
+
 # Local tooling
 .claude/
 .DS_Store

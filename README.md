@@ -40,26 +40,35 @@ Supported formats: EPUB, PDF, MOBI, AZW3, FB2, CBZ, CBR, DJVU, TXT, RTF, HTML, D
 ## Quick start (Docker)
 
 ```bash
-git clone https://github.com/<you>/bookshelf.git
-cd bookshelf
+git clone https://github.com/hthoene/Bookshelf.git
+cd Bookshelf
+cp .env.example .env    # optional: adjust port, IP and other settings
 docker compose up -d
 ```
 
 Open <http://localhost:8080> and create the administrator account.
+
+To update, run `git pull && docker compose up -d --build`. Your settings live in `.env`,
+which is not tracked by Git, so `docker-compose.yml` never needs local changes.
 
 Data (database, books, covers) is stored in the `bookshelf-data` volume, mounted at `/data`.
 If you prefer a bind mount instead, make sure the directory is writable by UID 1000.
 
 ### Configuration
 
+Set these in `.env` (see [.env.example](.env.example)). All of them are optional.
+
 | Variable | Default | Description |
 | --- | --- | --- |
-| `BOOKSHELF_DATA_DIR` | `/data` | Where the database, books and covers are stored |
-| `BOOKSHELF_PORT` | `8080` | HTTP port inside the container |
+| `BOOKSHELF_BIND_IP` | `0.0.0.0` | Host IP to listen on (`127.0.0.1` for local access only) |
+| `BOOKSHELF_HOST_PORT` | `8080` | Port on the host |
 | `BOOKSHELF_ALLOW_REGISTRATION` | `false` | Allow KOReader to create accounts via *Register* |
 | `BOOKSHELF_MAX_UPLOAD_MB` | `200` | Maximum size of a single upload |
 | `BOOKSHELF_SESSION_DAYS` | `30` | How long a web login lasts |
 | `BOOKSHELF_SECURE_COOKIES` | `false` | Set to `true` when served over HTTPS |
+
+When running without Docker Compose, `BOOKSHELF_DATA_DIR` (default `./data`, `/data` in the
+image) and `BOOKSHELF_PORT` (default `8080`) control the storage location and listening port.
 
 ### Command line
 

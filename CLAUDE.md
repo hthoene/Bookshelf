@@ -77,4 +77,5 @@ scripts/dev_seed.py  demo data for local development
 - **New page.** Add a router function and a template that extends `base.html`. Pass `user` and
   `nav` to the template. Register new router modules in `main.py`.
 - **New setting.** Add a field to `Settings` (with a `BOOKSHELF_` variable in `from_env`), then
-  document it in the README table and in `docker-compose.yml`.
+  pass it through in `docker-compose.yml` as `${VAR:-default}`, and document it in
+  `.env.example` and the README table. Users configure Compose only via `.env`.
