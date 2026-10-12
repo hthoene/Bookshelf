@@ -1,0 +1,18 @@
+{% extends "_auth_layout.html" %}
+{% block title %}Log in · Bookshelf{% endblock %}
+{% block heading %}Welcome back{% endblock %}
+{% block subheading %}Log in to your library{% endblock %}
+{% block form %}
+<form method="post" action="/login" class="form">
+  <input type="hidden" name="next" value="{{ next }}">
+  <div class="field">
+    <label for="username">Username</label>
+    <input class="input" id="username" name="username" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" required autofocus>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input class="input" id="password" name="password" type="password" autocomplete="current-password" required>
+  </div>
+  <button class="btn btn-primary btn-block">Log in</button>
+</form>
+{% endblock %}

@@ -1,0 +1,84 @@
+"""SQLAlchemy ORM models. Schema changes require a new Alembic migration (see CLAUDE.md)."""
+
+from __future__ import annotations
+
+from datetime import datetime
+
+from sqlalchemy import ForeignKey, String, Text, UniqueConstraint
+from sqlalchemy.orm import Mapped, mapped_column, relationship
+
+from .db import Base, utcnow
+
+
+class User(Base):
+    __tablename__ = "users"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    username: Mapped[str] = mapped_column(String(64), unique=True)
+    # bcrypt(md5(password)) – verifies both web logins and KOReader's md5-based sync key.
+    password_hash: Mapped[str] = mapped_column(String(100))
+    is_admin: Mapped[bool] = mapped_column(default=False)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+
+    books: Mapped[list[Book]] = relationship(
+        back_populates="owner", cascade="all, delete-orphan", passive_deletes=True
+    )
+
+
+class AuthSession(Base):
+    """A browser login session. Only a SHA-256 digest of the cookie token is stored."""
+
+    __tablename__ = "sessions"
+
+    token_hash: Mapped[str] = mapped_column(String(64), primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    expires_at: Mapped[datetime]
+
+    user: Mapped[User] = relationship()
+
+
+class Book(Base):
+    __tablename__ = "books"
+    __table_args__ = (UniqueConstraint("user_id", "partial_md5"),)
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    user_id: Mapped[int] = mapped_column(ForeignKey("users.id", ondelete="CASCADE"), index=True)
+
+    title: Mapped[str] = mapped_column(String(500))
+    author: Mapped[str | None] = mapped_column(String(500))
+    series: Mapped[str | None] = mapped_column(String(500))
+    series_index: Mapped[float | None]
+    description: Mapped[str | None] = mapped_column(Text)
+    language: Mapped[str | None] = mapped_column(String(20))
+    publisher: Mapped[str | None] = mapped_column(String(300))
+
+    format: Mapped[str] = mapped_column(String(10))
+    original_filename: Mapped[str] = mapped_column(String(500))
+    file_path: Mapped[str] = mapped_column(String(500))  # relative to Storage.books_dir
+    file_size: Mapped[int]
+    # KOReader document identifiers: "binary" (partial MD5 of the file) and "filename" (MD5).
+    partial_md5: Mapped[str] = mapped_column(String(32), index=True)
+    filename_md5: Mapped[str] = mapped_column(String(32), index=True)
+    has_cover: Mapped[bool] = mapped_column(default=False)
+
+    created_at: Mapped[datetime] = mapped_column(default=utcnow)
+    updated_at: Mapped[datetime] = mapped_column(default=utcnow, onupdate=utcnow)
+
+    owner: Mapped[User] = relationship(back_populates="books")
+
+
+class ReadingProgress(Base):
+    """Progress as reported by KOReader, keyed by its document hash (not by book id)."""
+
+    __tablename__ = "reading_progress"
+
+    user_id: Mapped[int] = mapped_column(
+        ForeignKey("users.id", ondelete="CASCADE"), primary_key=True
+    )
+    document: Mapped[str] = mapped_column(String(128), primary_key=True)
+    progress: Mapped[str] = mapped_column(Text, default="")
+    percentage: Mapped[float] = mapped_column(default=0.0)
+    device: Mapped[str] = mapped_column(String(200), default="")
+    device_id: Mapped[str] = mapped_column(String(200), default="")
+    timestamp: Mapped[int]  # unix seconds, as KOReader expects

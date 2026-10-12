@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+  <id>urn:bookshelf:root</id>
+  <title>Bookshelf</title>
+  <updated>{{ now }}</updated>
+  <author><name>Bookshelf</name></author>
+  <link rel="self" href="/opds" type="{{ navigation_type }}"/>
+  <link rel="start" href="/opds" type="{{ navigation_type }}"/>
+  <link rel="search" href="/opds/search.xml" type="application/opensearchdescription+xml"/>
+  {%- for key, title, description, query in sections %}
+  <entry>
+    <title>{{ title }}</title>
+    <id>urn:bookshelf:section:{{ key }}</id>
+    <updated>{{ now }}</updated>
+    <content type="text">{{ description }}</content>
+    <link rel="subsection" href="/opds/books?{{ query }}" type="{{ acquisition_type }}"/>
+  </entry>
+  {%- endfor %}
+</feed>

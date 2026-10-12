@@ -1,0 +1,11 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} · Bookshelf{% endblock %}
+{% block main_class %}auth-wrap{% endblock %}
+{% block content %}
+<div class="auth-card error-card">
+  <p class="error-code">{{ status }}</p>
+  <h1>{% if status == 404 %}Not found{% elif status == 403 %}No access{% else %}Something went wrong{% endif %}</h1>
+  <p class="muted">{{ message }}</p>
+  <a class="btn btn-primary" href="/">{{ icon('arrow-left', 18) }} Back to library</a>
+</div>
+{% endblock %}

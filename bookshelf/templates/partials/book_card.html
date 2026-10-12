@@ -1,0 +1,15 @@
+{% from "_macros.html" import cover %}
+<a class="book-card" href="/books/{{ entry.book.id }}">
+  <div class="cover-frame">
+    {{ cover(entry.book) }}
+    {% if entry.status == 'finished' %}
+    <span class="badge-done" title="Finished">{{ icon('check', 14) }}</span>
+    {% elif entry.status == 'reading' %}
+    <div class="cover-progress" title="{{ entry.percent }}% read"><span style="width: {{ entry.percent }}%"></span></div>
+    {% endif %}
+  </div>
+  <div class="book-meta">
+    <div class="book-title">{{ entry.book.title }}</div>
+    {% if entry.book.author %}<div class="book-author">{{ entry.book.author }}</div>{% endif %}
+  </div>
+</a>

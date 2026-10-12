@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom" xmlns:dc="http://purl.org/dc/terms/" xmlns:opds="http://opds-spec.org/2010/catalog">
+  <id>urn:bookshelf:{{ feed_id }}</id>
+  <title>{{ title }}</title>
+  <updated>{{ now }}</updated>
+  <author><name>Bookshelf</name></author>
+  <link rel="self" href="{{ self_url }}" type="{{ acquisition_type }}"/>
+  <link rel="start" href="/opds" type="{{ navigation_type }}"/>
+  <link rel="up" href="/opds" type="{{ navigation_type }}"/>
+  <link rel="search" href="/opds/search.xml" type="application/opensearchdescription+xml"/>
+  {%- if next_url %}
+  <link rel="next" href="{{ next_url }}" type="{{ acquisition_type }}"/>
+  {%- endif %}
+  {%- for entry in entries %}
+  {%- set book = entry.book %}
+  <entry>
+    <title>{{ book.title }}</title>
+    <id>urn:bookshelf:book:{{ book.id }}</id>
+    <updated>{{ book.updated_at|isotime }}</updated>
+    {%- if book.author %}
+    <author><name>{{ book.author }}</name></author>
+    {%- endif %}
+    {%- if book.language %}
+    <dc:language>{{ book.language }}</dc:language>
+    {%- endif %}
+    {%- if book.publisher %}
+    <dc:publisher>{{ book.publisher }}</dc:publisher>
+    {%- endif %}
+    {%- if book.description or book.series %}
+    <summary type="text">{% if book.series %}{{ book.series }}{% if book.series_index is not none %} #{{ book.series_index|number }}{% endif %}{% if book.description %} – {% endif %}{% endif %}{{ (book.description or '')|truncate(1200) }}</summary>
+    {%- endif %}
+    {%- if book.has_cover %}
+    <link rel="http://opds-spec.org/image" href="/opds/books/{{ book.id }}/cover?v={{ book.updated_at|timestamp }}" type="image/jpeg"/>
+    <link rel="http://opds-spec.org/image/thumbnail" href="/opds/books/{{ book.id }}/cover?v={{ book.updated_at|timestamp }}" type="image/jpeg"/>
+    {%- endif %}
+    <link rel="http://opds-spec.org/acquisition" href="/opds/books/{{ book.id }}/file" type="{{ mime_type(book.format) }}" title="{{ book.format|upper }}"/>
+  </entry>
+  {%- endfor %}
+</feed>

@@ -1,0 +1,16 @@
+{# Reusable template macros. Import with: {% from "_macros.html" import cover %} #}
+
+{% macro cover(book, eager=false) -%}
+{% if book.has_cover -%}
+<img class="cover" src="/books/{{ book.id }}/cover?v={{ book.updated_at|timestamp }}" alt="" loading="{{ 'eager' if eager else 'lazy' }}" decoding="async">
+{%- else -%}
+<div class="cover cover-placeholder" style="--hue: {{ book.title|hue }}" aria-hidden="true">
+  <span class="ph-title">{{ book.title|truncate(80) }}</span>
+  {% if book.author %}<span class="ph-author">{{ book.author|truncate(40) }}</span>{% endif %}
+</div>
+{%- endif %}
+{%- endmacro %}
+
+{% macro alert(message, kind="error") -%}
+{% if message %}<p class="alert alert-{{ kind }}" role="{{ 'alert' if kind == 'error' else 'status' }}">{{ message }}</p>{% endif %}
+{%- endmacro %}

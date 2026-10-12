@@ -1,0 +1,103 @@
+{% extends "base.html" %}
+{% from "_macros.html" import cover, alert %}
+{% block title %}{{ book.title }} · Bookshelf{% endblock %}
+{% block content %}
+<a class="back-link" href="/">{{ icon('arrow-left', 18) }} Library</a>
+{{ alert(error) }}
+
+<article class="book-detail">
+  <div class="detail-cover cover-frame">{{ cover(book, eager=true) }}</div>
+
+  <div class="detail-info">
+    {% if book.series %}
+    <p class="eyebrow">{{ book.series }}{% if book.series_index is not none %} · Book {{ book.series_index|number }}{% endif %}</p>
+    {% endif %}
+    <h1 class="detail-title">{{ book.title }}</h1>
+    {% if book.author %}<p class="detail-author">{{ book.author }}</p>{% endif %}
+
+    <div class="progress-card">
+      {% if entry.progress %}
+      <div class="progress-head">
+        <strong>{{ entry.percent }}%</strong>
+        <span class="muted">{{ status_labels[entry.status] }}</span>
+      </div>
+      <div class="progress progress-lg" role="progressbar" aria-valuenow="{{ entry.percent }}" aria-valuemin="0" aria-valuemax="100"><span style="width: {{ entry.percent }}%"></span></div>
+      <p class="muted small">{{ icon('sync', 14) }} Synced {{ entry.last_read|timeago }}{% if entry.progress.device %} from {{ entry.progress.device }}{% endif %}</p>
+      {% else %}
+      <p class="muted small no-margin">{{ icon('sync', 14) }} Not started yet. Progress appears here as soon as KOReader syncs.</p>
+      {% endif %}
+    </div>
+
+    <div class="actions">
+      <a class="btn btn-primary" href="/books/{{ book.id }}/file" download>{{ icon('download', 18) }} Download</a>
+      <button type="button" class="btn" data-dialog-open="edit-dialog">{{ icon('edit', 18) }} Edit</button>
+      <form method="post" action="/books/{{ book.id }}/delete" data-confirm="Delete “{{ book.title }}”? This can’t be undone.">
+        <button class="btn btn-danger">{{ icon('trash', 18) }} Delete</button>
+      </form>
+    </div>
+
+    {% if book.description %}
+    <div class="description">{{ book.description|paragraphs }}</div>
+    {% endif %}
+
+    <dl class="facts">
+      <div><dt>Format</dt><dd>{{ book.format|upper }}</dd></div>
+      <div><dt>Size</dt><dd>{{ book.file_size|filesize }}</dd></div>
+      {% if book.language %}<div><dt>Language</dt><dd>{{ book.language }}</dd></div>{% endif %}
+      {% if book.publisher %}<div><dt>Publisher</dt><dd>{{ book.publisher }}</dd></div>{% endif %}
+      <div><dt>Added</dt><dd>{{ book.created_at|date }}</dd></div>
+      <div class="wide"><dt>File</dt><dd class="mono">{{ book.original_filename }}</dd></div>
+      <div class="wide"><dt>KOReader document ID</dt><dd class="mono">{{ book.partial_md5 }}</dd></div>
+    </dl>
+  </div>
+</article>
+
+<dialog id="edit-dialog" class="dialog" aria-labelledby="edit-title">
+  <form method="post" action="/books/{{ book.id }}" enctype="multipart/form-data" class="form">
+    <header class="dialog-head">
+      <h2 id="edit-title">Edit book</h2>
+      <button type="button" class="icon-btn" data-dialog-close aria-label="Close">{{ icon('x') }}</button>
+    </header>
+    <div class="field">
+      <label for="title">Title</label>
+      <input class="input" id="title" name="title" value="{{ book.title }}" required>
+    </div>
+    <div class="field">
+      <label for="author">Author</label>
+      <input class="input" id="author" name="author" value="{{ book.author or '' }}">
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label for="series">Series</label>
+        <input class="input" id="series" name="series" value="{{ book.series or '' }}">
+      </div>
+      <div class="field">
+        <label for="series_index">Number</label>
+        <input class="input" id="series_index" name="series_index" inputmode="decimal" value="{{ book.series_index|number }}">
+      </div>
+    </div>
+    <div class="form-row">
+      <div class="field">
+        <label for="publisher">Publisher</label>
+        <input class="input" id="publisher" name="publisher" value="{{ book.publisher or '' }}">
+      </div>
+      <div class="field">
+        <label for="language">Language</label>
+        <input class="input" id="language" name="language" value="{{ book.language or '' }}">
+      </div>
+    </div>
+    <div class="field">
+      <label for="description">Description</label>
+      <textarea class="input" id="description" name="description" rows="6">{{ book.description or '' }}</textarea>
+    </div>
+    <div class="field">
+      <label for="cover">Replace cover</label>
+      <input class="input input-file" id="cover" name="cover" type="file" accept="image/*">
+    </div>
+    <footer class="dialog-foot">
+      <button type="button" class="btn" data-dialog-close>Cancel</button>
+      <button class="btn btn-primary">Save</button>
+    </footer>
+  </form>
+</dialog>
+{% endblock %}

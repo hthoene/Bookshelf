@@ -1,0 +1,8 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<OpenSearchDescription xmlns="http://a9.com/-/spec/opensearch/1.1/">
+  <ShortName>Bookshelf</ShortName>
+  <Description>Search your Bookshelf library</Description>
+  <InputEncoding>UTF-8</InputEncoding>
+  <OutputEncoding>UTF-8</OutputEncoding>
+  <Url type="{{ acquisition_type }}" template="{{ base_url }}/opds/books?q={searchTerms}"/>
+</OpenSearchDescription>

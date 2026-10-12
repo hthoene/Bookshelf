@@ -1,0 +1,21 @@
+{% extends "_auth_layout.html" %}
+{% block title %}Setup · Bookshelf{% endblock %}
+{% block heading %}Set up Bookshelf{% endblock %}
+{% block subheading %}Create the administrator account{% endblock %}
+{% block form %}
+<form method="post" action="/setup" class="form">
+  <div class="field">
+    <label for="username">Username</label>
+    <input class="input" id="username" name="username" value="{{ username or '' }}" autocomplete="username" autocapitalize="none" required autofocus>
+  </div>
+  <div class="field">
+    <label for="password">Password</label>
+    <input class="input" id="password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+  </div>
+  <div class="field">
+    <label for="password_confirm">Repeat password</label>
+    <input class="input" id="password_confirm" name="password_confirm" type="password" autocomplete="new-password" minlength="6" required>
+  </div>
+  <button class="btn btn-primary btn-block">Create account</button>
+</form>
+{% endblock %}

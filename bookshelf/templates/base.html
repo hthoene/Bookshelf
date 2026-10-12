@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="color-scheme" content="light dark">
+  <meta name="theme-color" content="#f6f5f1" media="(prefers-color-scheme: light)">
+  <meta name="theme-color" content="#151513" media="(prefers-color-scheme: dark)">
+  <title>{% block title %}Bookshelf{% endblock %}</title>
+  <link rel="icon" href="{{ static('favicon.svg') }}" type="image/svg+xml">
+  <link rel="stylesheet" href="{{ static('css/app.css') }}">
+  <script src="{{ static('js/htmx.min.js') }}" defer></script>
+  <script src="{{ static('js/app.js') }}" defer></script>
+</head>
+<body class="{% block body_class %}{% endblock %}">
+  {% if user %}
+  <header class="topbar">
+    <div class="topbar-inner">
+      <a class="brand" href="/">{{ icon('book', 22) }}<span>Bookshelf</span></a>
+      <nav class="nav" aria-label="Main">
+        <a href="/" class="{{ 'active' if nav == 'library' }}" title="Library">{{ icon('catalog') }}<span>Library</span></a>
+        <a href="/settings" class="{{ 'active' if nav == 'settings' }}" title="Settings">{{ icon('settings') }}<span>Settings</span></a>
+        {% if user.is_admin %}
+        <a href="/admin/users" class="{{ 'active' if nav == 'admin' }}" title="Users">{{ icon('users') }}<span>Users</span></a>
+        {% endif %}
+      </nav>
+      <button type="button" class="btn btn-primary btn-upload" data-upload-trigger>{{ icon('upload', 18) }}<span>Upload</span></button>
+    </div>
+  </header>
+  {% endif %}
+
+  <main class="{% block main_class %}container{% endblock %}">
+    {% block content %}{% endblock %}
+  </main>
+
+  {% if user %}
+  <input type="file" id="upload-input" multiple hidden accept="{{ upload_accept }}">
+  <div class="drop-overlay" hidden>
+    <div class="drop-box">{{ icon('upload', 40) }}<span>Drop books to upload</span></div>
+  </div>
+  <section class="upload-panel" hidden aria-live="polite">
+    <header class="upload-head">
+      <span class="upload-title">Uploading…</span>
+      <button type="button" class="icon-btn upload-close" aria-label="Close">{{ icon('x', 18) }}</button>
+    </header>
+    <ul class="upload-list"></ul>
+  </section>
+  {% endif %}
+</body>
+</html>

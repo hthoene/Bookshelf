@@ -1,0 +1,235 @@
+/* Bookshelf – small progressive enhancements:
+   uploads (picker + drag & drop), dialogs, confirmations and copy buttons. */
+(() => {
+  "use strict";
+
+  const UPLOAD_URL = "/api/books";
+  const PARALLEL_UPLOADS = 2;
+  const AUTO_HIDE_MS = 4000;
+
+  const $ = (selector, root = document) => root.querySelector(selector);
+
+  /* ---------- Dialogs, copy buttons, upload trigger ---------- */
+
+  document.addEventListener("click", (event) => {
+    const target = event.target;
+
+    // Clicking the backdrop of a modal dialog closes it.
+    if (target instanceof HTMLDialogElement) {
+      target.close();
+      return;
+    }
+    const opener = target.closest("[data-dialog-open]");
+    if (opener) {
+      document.getElementById(opener.dataset.dialogOpen)?.showModal();
+      return;
+    }
+    if (target.closest("[data-dialog-close]")) {
+      target.closest("dialog")?.close();
+      return;
+    }
+    const copyButton = target.closest("[data-copy]");
+    if (copyButton) {
+      copyText(copyButton.dataset.copy).then(() => flashCopied(copyButton));
+      return;
+    }
+    if (target.closest("[data-upload-trigger]")) {
+      $("#upload-input")?.click();
+    }
+  });
+
+  document.addEventListener("submit", (event) => {
+    const message = event.target.dataset.confirm;
+    if (message && !window.confirm(message)) event.preventDefault();
+  });
+
+  async function copyText(text) {
+    if (navigator.clipboard && window.isSecureContext) {
+      return navigator.clipboard.writeText(text);
+    }
+    // Fallback for plain-HTTP origins (typical for LAN servers).
+    const area = Object.assign(document.createElement("textarea"), { value: text });
+    area.style.cssText = "position:fixed;opacity:0";
+    document.body.append(area);
+    area.select();
+    document.execCommand("copy");
+    area.remove();
+  }
+
+  function flashCopied(button) {
+    const label = button.querySelector("span");
+    const original = label?.textContent;
+    button.classList.add("is-copied");
+    if (label) label.textContent = "Copied";
+    setTimeout(() => {
+      button.classList.remove("is-copied");
+      if (label) label.textContent = original;
+    }, 1600);
+  }
+
+  /* ---------- Uploads ---------- */
+
+  const input = $("#upload-input");
+  const panel = $(".upload-panel");
+  const overlay = $(".drop-overlay");
+  if (!input || !panel || !overlay) return;
+
+  const list = $(".upload-list", panel);
+  const title = $(".upload-title", panel);
+  const queue = [];
+  const stats = { total: 0, finished: 0, added: 0, failed: 0 };
+  let active = 0;
+  let hideTimer = null;
+
+  input.addEventListener("change", () => {
+    enqueue(input.files);
+    input.value = "";
+  });
+
+  $(".upload-close", panel).addEventListener("click", () => {
+    if (active || queue.length) panel.hidden = true;
+    else resetPanel();
+  });
+
+  function enqueue(files) {
+    if (!files || !files.length) return;
+    clearTimeout(hideTimer);
+    panel.hidden = false;
+    for (const file of files) {
+      queue.push({ file, row: addRow(file) });
+      stats.total += 1;
+    }
+    updateTitle();
+    pump();
+  }
+
+  function addRow(file) {
+    const row = document.createElement("li");
+    row.className = "upload-item";
+    row.innerHTML =
+      '<div class="upload-row"><span class="upload-name"></span>' +
+      '<span class="upload-state">Waiting…</span></div>' +
+      '<div class="progress"><span style="width:0%"></span></div>';
+    $(".upload-name", row).textContent = file.name;
+    list.append(row);
+    return row;
+  }
+
+  function pump() {
+    while (active < PARALLEL_UPLOADS && queue.length) {
+      const job = queue.shift();
+      active += 1;
+      upload(job).then(() => {
+        active -= 1;
+        stats.finished += 1;
+        updateTitle();
+        if (active === 0 && queue.length === 0) allDone();
+        else pump();
+      });
+    }
+  }
+
+  function upload({ file, row }) {
+    return new Promise((resolve) => {
+      const bar = $(".progress span", row);
+      const state = $(".upload-state", row);
+      const xhr = new XMLHttpRequest();
+      const form = new FormData();
+      form.append("file", file);
+
+      xhr.upload.addEventListener("progress", (event) => {
+        if (!event.lengthComputable) return;
+        const percent = Math.round((event.loaded / event.total) * 100);
+        bar.style.width = `${percent}%`;
+        state.textContent = percent < 100 ? `${percent}%` : "Processing…";
+      });
+      xhr.addEventListener("load", () => {
+        let data = {};
+        try {
+          data = JSON.parse(xhr.responseText);
+        } catch {
+          /* non-JSON error page */
+        }
+        if (xhr.status === 201) {
+          stats.added += 1;
+          finishRow(row, "done", "Added");
+        } else if (xhr.status === 409) {
+          finishRow(row, "skipped", "Already in library");
+        } else {
+          stats.failed += 1;
+          finishRow(row, "error", data.error || `Failed (${xhr.status})`);
+        }
+        resolve();
+      });
+      xhr.addEventListener("error", () => {
+        stats.failed += 1;
+        finishRow(row, "error", "Network error");
+        resolve();
+      });
+
+      state.textContent = "0%";
+      xhr.open("POST", UPLOAD_URL);
+      xhr.setRequestHeader("Accept", "application/json");
+      xhr.send(form);
+    });
+  }
+
+  function finishRow(row, kind, text) {
+    row.classList.add(`is-${kind}`);
+    $(".upload-state", row).textContent = text;
+    $(".progress span", row).style.width = "100%";
+  }
+
+  function updateTitle() {
+    const running = active > 0 || queue.length > 0;
+    title.textContent = running
+      ? `Uploading… ${stats.finished} of ${stats.total} done`
+      : `${stats.added} of ${stats.total} added`;
+  }
+
+  function allDone() {
+    refreshLibrary();
+    if (stats.failed === 0) hideTimer = setTimeout(resetPanel, AUTO_HIDE_MS);
+  }
+
+  function resetPanel() {
+    panel.hidden = true;
+    list.replaceChildren();
+    Object.assign(stats, { total: 0, finished: 0, added: 0, failed: 0 });
+  }
+
+  function refreshLibrary() {
+    if (!document.getElementById("library") || !window.htmx || stats.added === 0) return;
+    window.htmx.ajax("GET", location.pathname + location.search, {
+      target: "#library",
+      swap: "outerHTML",
+    });
+  }
+
+  /* ---------- Drag & drop anywhere on the page ---------- */
+
+  let dragDepth = 0;
+  const hasFiles = (event) => Array.from(event.dataTransfer?.types || []).includes("Files");
+
+  window.addEventListener("dragenter", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth += 1;
+    overlay.hidden = false;
+  });
+  window.addEventListener("dragover", (event) => {
+    if (hasFiles(event)) event.preventDefault();
+  });
+  window.addEventListener("dragleave", (event) => {
+    if (!hasFiles(event)) return;
+    dragDepth = Math.max(0, dragDepth - 1);
+    if (dragDepth === 0) overlay.hidden = true;
+  });
+  window.addEventListener("drop", (event) => {
+    if (!hasFiles(event)) return;
+    event.preventDefault();
+    dragDepth = 0;
+    overlay.hidden = true;
+    enqueue(event.dataTransfer.files);
+  });
+})();

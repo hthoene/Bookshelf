@@ -1,0 +1,19 @@
+services:
+  bookshelf:
+    build: .
+    image: bookshelf:latest
+    container_name: bookshelf
+    restart: unless-stopped
+    ports:
+      - "8080:8080"
+    environment:
+      # Let KOReader devices create accounts via "Register" in the sync settings.
+      BOOKSHELF_ALLOW_REGISTRATION: "false"
+      BOOKSHELF_MAX_UPLOAD_MB: "200"
+      # Set to "true" when served over HTTPS (e.g. behind a reverse proxy).
+      BOOKSHELF_SECURE_COOKIES: "false"
+    volumes:
+      - bookshelf-data:/data
+
+volumes:
+  bookshelf-data:

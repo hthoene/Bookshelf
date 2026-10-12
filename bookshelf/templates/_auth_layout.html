@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% from "_macros.html" import alert %}
+{% block main_class %}auth-wrap{% endblock %}
+{% block content %}
+<div class="auth-card">
+  <div class="auth-brand">
+    <span class="logo">{{ icon('book', 26) }}</span>
+    <h1>{% block heading %}{% endblock %}</h1>
+    <p class="muted">{% block subheading %}{% endblock %}</p>
+  </div>
+  <div class="card">
+    {{ alert(error) }}
+    {% block form %}{% endblock %}
+  </div>
+</div>
+{% endblock %}

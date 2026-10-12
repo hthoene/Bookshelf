@@ -1,0 +1,79 @@
+{% extends "base.html" %}
+{% from "_macros.html" import alert %}
+{% block title %}Settings · Bookshelf{% endblock %}
+
+{% macro copy_field(id, value) -%}
+<div class="copy-field">
+  <input class="input mono" id="{{ id }}" value="{{ value }}" readonly>
+  <button type="button" class="btn" data-copy="{{ value }}">{{ icon('copy', 16) }}<span>Copy</span></button>
+</div>
+{%- endmacro %}
+
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Settings</h1>
+  <p class="muted">Signed in as <strong>{{ user.username }}</strong>{% if user.is_admin %} · Administrator{% endif %}</p>
+</div>
+
+<div class="stack">
+  <section class="card">
+    <h2>{{ icon('sync', 18) }} KOReader progress sync</h2>
+    <p class="card-sub">Keep your reading position in sync across all your KOReader devices.</p>
+    <div class="field">
+      <label for="sync-url">Server address</label>
+      {{ copy_field('sync-url', server_url) }}
+    </div>
+    <ol class="steps">
+      <li>In KOReader, open a book and go to <strong>Tools → Progress sync → Custom sync server</strong>.</li>
+      <li>Enter the server address above.</li>
+      <li>Choose <strong>Login</strong> and use your Bookshelf username and password.</li>
+      <li>Optionally enable automatic sync. The default document matching (“Binary”) works best.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>{{ icon('catalog', 18) }} OPDS catalog</h2>
+    <p class="card-sub">Browse and download your library directly on your e-reader.</p>
+    <div class="field">
+      <label for="opds-url">Catalog address</label>
+      {{ copy_field('opds-url', opds_url) }}
+    </div>
+    <ol class="steps">
+      <li>In KOReader’s file browser, open <strong>Search → OPDS catalog</strong> and tap <strong>+</strong>.</li>
+      <li>Enter the catalog address with your Bookshelf username and password.</li>
+    </ol>
+  </section>
+
+  <section class="card">
+    <h2>{{ icon('key', 18) }} Change password</h2>
+    <p class="card-sub">Your password is also used by KOReader and OPDS.</p>
+    {{ alert(password_error) }}
+    {{ alert(password_notice, 'ok') }}
+    <form method="post" action="/settings/password" class="form form-narrow">
+      <div class="field">
+        <label for="current_password">Current password</label>
+        <input class="input" id="current_password" name="current_password" type="password" autocomplete="current-password" required>
+      </div>
+      <div class="field">
+        <label for="new_password">New password</label>
+        <input class="input" id="new_password" name="new_password" type="password" autocomplete="new-password" minlength="6" required>
+      </div>
+      <div class="field">
+        <label for="new_password_confirm">Repeat new password</label>
+        <input class="input" id="new_password_confirm" name="new_password_confirm" type="password" autocomplete="new-password" minlength="6" required>
+      </div>
+      <div><button class="btn btn-primary">Change password</button></div>
+    </form>
+  </section>
+
+  <section class="card card-row">
+    <div>
+      <h2>Log out</h2>
+      <p class="card-sub no-margin">End your session in this browser.</p>
+    </div>
+    <form method="post" action="/logout">
+      <button class="btn">{{ icon('logout', 18) }} Log out</button>
+    </form>
+  </section>
+</div>
+{% endblock %}

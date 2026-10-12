@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}Library · Bookshelf{% endblock %}
+{% block content %}
+<form class="library" action="/" method="get"
+      hx-get="/" hx-target="#library" hx-swap="outerHTML" hx-push-url="true" hx-sync="this:replace"
+      hx-trigger="input changed delay:250ms from:#q, search from:#q, change[target.name!=='q'], submit">
+  <div class="toolbar">
+    <label class="search">
+      {{ icon('search', 18) }}
+      <input id="q" type="search" name="q" value="{{ q }}" placeholder="Search title, author or series" autocomplete="off" aria-label="Search">
+    </label>
+    <select class="select" name="sort" aria-label="Sort by">
+      {% for key, label in sort_labels.items() %}
+      <option value="{{ key }}" {{ 'selected' if sort == key }}>{{ label }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  {% include "partials/library.html" %}
+</form>
+{% endblock %}

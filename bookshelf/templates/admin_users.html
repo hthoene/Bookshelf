@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+{% from "_macros.html" import alert %}
+{% block title %}Users · Bookshelf{% endblock %}
+{% block content %}
+<div class="page-head">
+  <h1 class="page-title">Users</h1>
+  <p class="muted">Every user has a private library and their own reading progress.</p>
+</div>
+
+<div class="stack">
+  {{ alert(error) }}
+  {{ alert(notice, 'ok') }}
+
+  <section class="card">
+    <div class="table-wrap">
+      <table class="table">
+        <thead>
+          <tr><th>User</th><th>Books</th><th>Created</th><th class="sr-only">Actions</th></tr>
+        </thead>
+        <tbody>
+          {% for row_user, book_count in rows %}
+          <tr>
+            <td>
+              <strong>{{ row_user.username }}</strong>
+              {% if row_user.is_admin %}<span class="badge">Admin</span>{% endif %}
+              {% if row_user.id == user.id %}<span class="muted small">(you)</span>{% endif %}
+            </td>
+            <td>{{ book_count }}</td>
+            <td class="muted">{{ row_user.created_at|date }}</td>
+            <td>
+              <div class="row-actions">
+                <button type="button" class="btn btn-sm" data-dialog-open="password-{{ row_user.id }}">{{ icon('key', 16) }} Password</button>
+                {% if row_user.id != user.id %}
+                <form method="post" action="/admin/users/{{ row_user.id }}/delete"
+                      data-confirm="Delete “{{ row_user.username }}” and all of their books? This can’t be undone.">
+                  <button class="btn btn-sm btn-danger" aria-label="Delete {{ row_user.username }}">{{ icon('trash', 16) }}</button>
+                </form>
+                {% endif %}
+              </div>
+              <dialog id="password-{{ row_user.id }}" class="dialog dialog-sm" aria-label="Reset password">
+                <form method="post" action="/admin/users/{{ row_user.id }}/password" class="form">
+                  <header class="dialog-head">
+                    <h2>Reset password</h2>
+                    <button type="button" class="icon-btn" data-dialog-close aria-label="Close">{{ icon('x') }}</button>
+                  </header>
+                  <p class="muted no-margin">New password for <strong>{{ row_user.username }}</strong>. Their other sessions will be logged out.</p>
+                  <div class="field">
+                    <label for="pw-{{ row_user.id }}">New password</label>
+                    <input class="input" id="pw-{{ row_user.id }}" name="password" type="password" autocomplete="new-password" minlength="6" required>
+                  </div>
+                  <footer class="dialog-foot">
+                    <button type="button" class="btn" data-dialog-close>Cancel</button>
+                    <button class="btn btn-primary">Set password</button>
+                  </footer>
+                </form>
+              </dialog>
+            </td>
+          </tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </section>
+
+  <section class="card">
+    <h2>{{ icon('plus', 18) }} Add user</h2>
+    <p class="card-sub">The new user can log in on the web, in KOReader sync and via OPDS.</p>
+    <form method="post" action="/admin/users" class="form form-narrow">
+      <div class="field">
+        <label for="new-username">Username</label>
+        <input class="input" id="new-username" name="username" value="{{ form_username or '' }}" autocomplete="off" autocapitalize="none" required>
+      </div>
+      <div class="field">
+        <label for="new-password">Password</label>
+        <input class="input" id="new-password" name="password" type="password" autocomplete="new-password" minlength="6" required>
+      </div>
+      <label class="checkbox"><input type="checkbox" name="is_admin" value="true"> Administrator</label>
+      <div><button class="btn btn-primary">Create user</button></div>
+    </form>
+  </section>
+</div>
+{% endblock %}
